@@ -79,6 +79,23 @@
   <ItemGroup>
     <CudaCompile Include="kernel.cu" />
   </ItemGroup>
+  <ItemGroup>
+    <Object Include="cube.obj" />
+    <Object Include="piston.obj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Finder.cpp" />
+    <ClCompile Include="Loader.cpp" />
+    <ClCompile Include="Point.cpp" />
+    <ClCompile Include="Space_map2.cpp" />
+    <ClCompile Include="unsigned_distance_function.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Finder.h" />
+    <ClInclude Include="Loader.h" />
+    <ClInclude Include="Point.h" />
+    <ClInclude Include="Space_map2.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.5.targets" />
