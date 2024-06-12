@@ -173,6 +173,7 @@ int main()
     cout << "******************************************************************" << endl << endl;
 
 
+
     Point target = { 0,1,1.2 };
     double beta = 2;
     double map_size = 0.5;
