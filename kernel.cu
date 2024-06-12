@@ -21,6 +21,19 @@
 #include "Space_map2.h"
 #include "Loader.h"
 
+float unsigned_distance_brute_force(const Points& points, const Point& target, double beta, int& nearest_point);
+double unsigned_distance_space_map(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
+double unsigned_distance_space_map2(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
+void print_output(float dist, int nearest_point, const Point& target, const Points& points);
+
+struct min_dist
+{
+    __host__ __device__
+        double operator()(const double& Z, const double& Y) const {
+        return (Z < Y) ? Z : Y;
+    }
+};
+
 #define _px_ thrust::get<0>(t)
 #define _py_ thrust::get<1>(t)
 #define _pz_ thrust::get<2>(t)
@@ -36,37 +49,22 @@ struct dist2_tuple
     }
 };
 
-struct dist_sqxy
-{
-    const double x, y;
-    dist_sqxy(double _x, double _y) : x(_x), y(_y) {}
-    __host__ __device__
-        double operator()(const double& X, const double& Y) const {
-        return (X - x) * (X - x) + (Y - y) * (Y - y);
-    }
-};
-
-struct dist_sqz
-{
-    const double z;
-    dist_sqz(double _z) : z(_z) {}
-    __host__ __device__
-        double operator()(const double& Z, const double& Y) const {
-        return (Z - z) * (Z - z) + Y;
-    }
-};
-
-struct min_dist
-{
-    __host__ __device__
-        double operator()(const double& Z, const double& Y) const {
-        return (Z < Y) ? Z : Y;
-    }
-};
-
 typedef thrust::host_vector<double> Hvec;
 typedef thrust::device_vector<double> Dvec;
-double min_dist_calculation(const Hvec& Px, const Hvec& Py, const Hvec& Pz, const Point& target, const double& beta2);
+
+#define _RESULTANT_(Y) Y.begin(), Y.end()
+#define _POINT_(X,Y,Z) thrust::make_zip_iterator(thrust::make_tuple(X.begin(), Y.begin(), Z.begin())) , thrust::make_zip_iterator(thrust::make_tuple(X.end(), Y.end(), Z.end()))
+#define CALC_DIST_TO_(target) dist2_tuple(target.x, target.y, target.z)
+double min_dist_calculation(const Hvec& Px, const Hvec& Py, const Hvec& Pz, const Point& target, const double& beta2) {
+    Dvec X = Px, Y = Py, Z = Pz;
+
+    // apply the transformation
+    //thrust::transform(X.begin(), X.end(), Y.begin(), Y.begin(), dist_sqxy(target.x,target.y));
+    //thrust::transform(Z.begin(), Z.end(), Y.begin(), Y.begin(), dist_sqz(target.z));
+    thrust::for_each(_POINT_(X, Y, Z), CALC_DIST_TO_(target));
+    return thrust::reduce(_RESULTANT_(Y), beta2, min_dist());
+}
+
 
 double unsigned_distance_space_map_cuda(const Points& points, const Point& target, double beta, double map_size, int& nearest_point) {
 
@@ -91,72 +89,9 @@ double unsigned_distance_space_map_cuda(const Points& points, const Point& targe
     return min_dist_calculation(X, Y, Z, target, beta2);
 }
 
-#define _RESULTANT_(Y) Y.begin(), Y.end()
-#define _POINT_(X,Y,Z) thrust::make_zip_iterator(thrust::make_tuple(X.begin(), Y.begin(), Z.begin())) , thrust::make_zip_iterator(thrust::make_tuple(X.end(), Y.end(), Z.end()))
-#define CALC_DIST_TO_(target) dist2_tuple(target.x, target.y, target.z)
-double min_dist_calculation(const Hvec& Px, const Hvec& Py, const Hvec& Pz, const Point& target, const double& beta2) {
-    Dvec X = Px, Y = Py, Z = Pz;
-
-    // apply the transformation
-    //thrust::transform(X.begin(), X.end(), Y.begin(), Y.begin(), dist_sqxy(target.x,target.y));
-    //thrust::transform(Z.begin(), Z.end(), Y.begin(), Y.begin(), dist_sqz(target.z));
-    thrust::for_each(_POINT_(X, Y, Z), CALC_DIST_TO_(target));
-    return thrust::reduce(_RESULTANT_(Y), beta2, min_dist());
-}
-
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
+__global__ void addKernel(int *c, const int *a, const int *b){int i = threadIdx.x;c[i] = a[i] + b[i];}
 
-__global__ void addKernel(int *c, const int *a, const int *b)
-{
-    int i = threadIdx.x;
-    c[i] = a[i] + b[i];
-}
-float unsigned_distance_brute_force(const Points& points, const Point& target, double beta, int& nearest_point) {
-    nearest_point = -1;
-    float min_dist = target.dist(points[0]);
-    int i = 0;
-    double beta2 = beta * beta;
-    for (const Point& p : points)
-    {
-        float dist = target.dist(p);
-        if (dist < min_dist)
-        {
-            min_dist = dist;
-            nearest_point = i;
-        }
-        i++;
-    }
-    return (min_dist > beta2) ? beta2 : min_dist;
-}
-
-double unsigned_distance_space_map(const Points& points, const Point& target, double beta, double map_size, int& nearest_point) {
-
-    nearest_point = -1;
-    Space_map::initialize_space_map(/* with input points as */ points,/* map_size as */ map_size, /*  and beta as */ beta);
-    double unsigned_dist = Space_map::search_space_map(points, target, nearest_point);
-    Space_map::make_empty();
-
-    return unsigned_dist;
-}
-
-double unsigned_distance_space_map2(const Points& points, const Point& target, double beta, double map_size, int& nearest_point) {
-
-    nearest_point = -1;
-    Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
-    double unsigned_dist = space_map.search_space_map(points, target, beta, nearest_point);
-    space_map.make_empty();
-    return unsigned_dist;
-}
-
-void print_output(float dist, int nearest_point, const Point& target, const Points& points) {
-    cout << "Unsigned distance : " << sqrt(dist) << endl;
-    cout << "Target point : "; target.print();
-    cout << "Nearest point : ";
-    if (nearest_point >= 0) points[nearest_point].print();
-    else cout << "Point not found!" << endl;
-
-    cout << endl << endl;
-}
 
 int main()
 {
@@ -240,6 +175,52 @@ int main()
     return 0;
 }
 
+float unsigned_distance_brute_force(const Points& points, const Point& target, double beta, int& nearest_point) {
+    nearest_point = -1;
+    float min_dist = target.dist(points[0]);
+    int i = 0;
+    double beta2 = beta * beta;
+    for (const Point& p : points)
+    {
+        float dist = target.dist(p);
+        if (dist < min_dist)
+        {
+            min_dist = dist;
+            nearest_point = i;
+        }
+        i++;
+    }
+    return (min_dist > beta2) ? beta2 : min_dist;
+}
+double unsigned_distance_space_map(const Points& points, const Point& target, double beta, double map_size, int& nearest_point) {
+
+    nearest_point = -1;
+    Space_map::initialize_space_map(/* with input points as */ points,/* map_size as */ map_size, /*  and beta as */ beta);
+    double unsigned_dist = Space_map::search_space_map(points, target, nearest_point);
+    Space_map::make_empty();
+
+    return unsigned_dist;
+}
+
+double unsigned_distance_space_map2(const Points& points, const Point& target, double beta, double map_size, int& nearest_point) {
+
+    nearest_point = -1;
+    Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
+    double unsigned_dist = space_map.search_space_map(points, target, beta, nearest_point);
+    space_map.make_empty();
+    return unsigned_dist;
+}
+
+void print_output(float dist, int nearest_point, const Point& target, const Points& points) {
+    cout << "Unsigned distance : " << sqrt(dist) << endl;
+    cout << "Target point : "; target.print();
+    cout << "Nearest point : ";
+    if (nearest_point >= 0) points[nearest_point].print();
+    else cout << "Point not found!" << endl;
+
+    cout << endl << endl;
+}
+
 // Helper function for using CUDA to add vectors in parallel.
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
 {
@@ -319,3 +300,25 @@ Error:
     
     return cudaStatus;
 }
+
+struct dist_sqxy
+{
+    const double x, y;
+    dist_sqxy(double _x, double _y) : x(_x), y(_y) {}
+    __host__ __device__
+        double operator()(const double& X, const double& Y) const {
+        return (X - x) * (X - x) + (Y - y) * (Y - y);
+    }
+};
+
+struct dist_sqz
+{
+    const double z;
+    dist_sqz(double _z) : z(_z) {}
+    __host__ __device__
+        double operator()(const double& Z, const double& Y) const {
+        return (Z - z) * (Z - z) + Y;
+    }
+};
+
+
