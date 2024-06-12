@@ -4,7 +4,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include "Point.h"
-
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 class Point_index
 {
 public:
@@ -112,6 +113,8 @@ public:
             lookup_point_region(Point_index( i, j, k), point_indexes);
     }
 
+
+
     double search_space_map(const Points& points, const Point& target, const double& beta, int& nearest_point ) {
         vector<int> point_indexes;
         double beta2 = beta * beta;
@@ -130,5 +133,25 @@ public:
         }
         return (min_dist > beta2) ? beta2 : min_dist;
     }
+
+    //double search_space_map_parallel(const Points& points, const Point& target, const double& beta, int& nearest_point) {
+    //    vector<int> point_indexes;
+    //    vector<double> dists;
+    //    double beta2 = beta * beta;
+    //    lookup_region(target, beta, point_indexes);
+    //    Points points_filtered;
+    //    points_filtered.reserve(point_indexes.size());
+
+    //    for (int i : point_indexes)
+    //        points_filtered.push_back(points[i]);
+
+    //    lookup_region_parallel(points_filtered, target, beta2, dists);
+    //}
+
+    //void lookup_region_parallel(const Points& points, const Point& target, const double& beta2, vector<double>& dist) {
+    //    int i = threadIdx.x;
+    //    double min_dist = target.dist(points[i]);
+    //    dist[i] = (min_dist > beta2) ? beta2 : min_dist;
+    //}
 
 };

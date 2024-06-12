@@ -18,17 +18,11 @@
     <ClCompile Include="Finder.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Loader.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="Point.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="Space_map2.cpp">
       <Filter>Source</Filter>
-    </ClCompile>
-    <ClCompile Include="unsigned_distance_function.h">
-      <Filter>Headers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -44,13 +38,8 @@
     <ClInclude Include="Space_map2.h">
       <Filter>Headers</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="cube.obj">
-      <Filter>Obj</Filter>
-    </Object>
-    <Object Include="piston.obj">
-      <Filter>Obj</Filter>
-    </Object>
+    <ClInclude Include="thrust_dist.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
