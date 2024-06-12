@@ -21,6 +21,9 @@
 #include "Space_map2.h"
 #include "Loader.h"
 
+#define _px_ thrust::get<0>(t)
+#define _py_ thrust::get<1>(t)
+#define _pz_ thrust::get<2>(t)
 struct dist2_tuple
 {
     const double x, y, z;
@@ -28,13 +31,8 @@ struct dist2_tuple
 
     template <typename Tuple>
     __host__ __device__
-    void operator()(Tuple t)
-    {
-        double& px = thrust::get<0>(t);
-        double& py = thrust::get<1>(t);
-        double& pz = thrust::get<2>(t);
-
-        thrust::get<1>(t) = (px - x) * (px - x) + (py - y) * (py - y) + (pz - z) * (pz - z);
+    void operator()(Tuple t){
+        _py_ = (_px_ - x) * (_px_ - x) + (_py_ - y) * (_py_ - y) + (_pz_ - z) * (_pz_ - z);
     }
 };
 
@@ -93,15 +91,17 @@ double unsigned_distance_space_map_cuda(const Points& points, const Point& targe
     return min_dist_calculation(X, Y, Z, target, beta2);
 }
 
-#define _ZIP_(X,Y,Z) thrust::make_zip_iterator(thrust::make_tuple(X.begin(), Y.begin(), Z.begin())) , thrust::make_zip_iterator(thrust::make_tuple(X.end(), Y.end(), Z.end()))
+#define _RESULTANT_(Y) Y.begin(), Y.end()
+#define _POINT_(X,Y,Z) thrust::make_zip_iterator(thrust::make_tuple(X.begin(), Y.begin(), Z.begin())) , thrust::make_zip_iterator(thrust::make_tuple(X.end(), Y.end(), Z.end()))
+#define CALC_DIST_TO_(target) dist2_tuple(target.x, target.y, target.z)
 double min_dist_calculation(const Hvec& Px, const Hvec& Py, const Hvec& Pz, const Point& target, const double& beta2) {
     Dvec X = Px, Y = Py, Z = Pz;
 
     // apply the transformation
     //thrust::transform(X.begin(), X.end(), Y.begin(), Y.begin(), dist_sqxy(target.x,target.y));
     //thrust::transform(Z.begin(), Z.end(), Y.begin(), Y.begin(), dist_sqz(target.z));
-    thrust::for_each(_ZIP_(X, Y, Z), dist2_tuple(target.x, target.y, target.z));
-    return thrust::reduce(Y.begin(), Y.end(), beta2, min_dist());
+    thrust::for_each(_POINT_(X, Y, Z), CALC_DIST_TO_(target));
+    return thrust::reduce(_RESULTANT_(Y), beta2, min_dist());
 }
 
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
