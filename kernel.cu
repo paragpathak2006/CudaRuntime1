@@ -100,7 +100,7 @@ double min_dist_calculation(const Hvec& Px, const Hvec& Py, const Hvec& Pz, cons
     // apply the transformation
     //thrust::transform(X.begin(), X.end(), Y.begin(), Y.begin(), dist_sqxy(target.x,target.y));
     //thrust::transform(Z.begin(), Z.end(), Y.begin(), Y.begin(), dist_sqz(target.z));
-    thrust::for_each(_ZIP_(X, Y, Z), dist2_tuple(target.x, target.x, target.x));
+    thrust::for_each(_ZIP_(X, Y, Z), dist2_tuple(target.x, target.y, target.z));
     return thrust::reduce(Y.begin(), Y.end(), beta2, min_dist());
 }
 
