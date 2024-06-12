@@ -140,10 +140,8 @@ void print_output(float dist, int nearest_point, const Point& target, const Poin
     cout << endl << endl;
 }
 
-
 int main()
 {
-
     const int arraySize = 5;
     const int a[arraySize] = { 1, 2, 3, 4, 5 };
     const int b[arraySize] = { 10, 20, 30, 40, 50 };
