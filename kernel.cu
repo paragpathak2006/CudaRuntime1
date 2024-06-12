@@ -21,6 +21,22 @@
 #include "Space_map2.h"
 #include "Loader.h"
 
+struct dist2_tuple
+{
+    const double x, y, z;
+    dist2_tuple(double _x, double _y, double _z) : x(_x), y(_y), z(_z) {}
+
+    template <typename Tuple>
+    __host__ __device__
+    void operator()(Tuple t)
+    {
+        double& px = thrust::get<0>(t);
+        double& py = thrust::get<1>(t);
+        double& pz = thrust::get<2>(t);
+
+        thrust::get<1>(t) = (px - x) * (px - x) + (py - y) * (py - y) + (pz - z) * (pz - z);
+    }
+};
 
 struct dist_sqxy
 {
@@ -42,7 +58,7 @@ struct dist_sqz
     }
 };
 
-struct mim_dist
+struct min_dist
 {
     __host__ __device__
         double operator()(const double& Z, const double& Y) const {
@@ -77,13 +93,15 @@ double unsigned_distance_space_map_cuda(const Points& points, const Point& targe
     return min_dist_calculation(X, Y, Z, target, beta2);
 }
 
+#define _ZIP_(X,Y,Z) thrust::make_zip_iterator(thrust::make_tuple(X.begin(), Y.begin(), Z.begin())) , thrust::make_zip_iterator(thrust::make_tuple(X.end(), Y.end(), Z.end()))
 double min_dist_calculation(const Hvec& Px, const Hvec& Py, const Hvec& Pz, const Point& target, const double& beta2) {
     Dvec X = Px, Y = Py, Z = Pz;
 
-    thrust::transform(X.begin(), X.end(), Y.begin(), Y.begin(), dist_sqxy(target.x,target.y));
-    thrust::transform(Z.begin(), Z.end(), Y.begin(), Y.begin(), dist_sqz(target.z));
-
-    return thrust::reduce(Y.begin(), Y.end(), beta2, mim_dist());
+    // apply the transformation
+    //thrust::transform(X.begin(), X.end(), Y.begin(), Y.begin(), dist_sqxy(target.x,target.y));
+    //thrust::transform(Z.begin(), Z.end(), Y.begin(), Y.begin(), dist_sqz(target.z));
+    thrust::for_each(_ZIP_(X, Y, Z), dist2_tuple(target.x, target.x, target.x));
+    return thrust::reduce(Y.begin(), Y.end(), beta2, min_dist());
 }
 
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);

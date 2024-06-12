@@ -34,7 +34,7 @@ struct Hash_of_Point_index {
 };
 
 typedef unordered_multimap< Point_index, int, Hash_of_Point_index> Point_Index_Map;
-#define for_range(it,range) for(auto& it = range.first; it != range.second; ++it)
+#define FOR_RANGE(it,range) for(auto& it = range.first; it != range.second; ++it)
 
 class Space_map2
 {
@@ -83,7 +83,7 @@ public:
             auto range = point_map.equal_range(P);
 
             //cout << "Points found" << endl;
-            for_range(point, range) {
+            FOR_RANGE(point, range) {
                 int point_index = point->second;
                 point_indexes.push_back(point_index);
                 //point->first.print();
