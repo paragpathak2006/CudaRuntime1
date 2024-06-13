@@ -80,14 +80,12 @@
     <CudaCompile Include="kernel.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Containers\Finder.cpp" />
     <ClCompile Include="Containers\Space_map2.cpp" />
     <ClCompile Include="Geometry\Point.cpp" />
     <ClCompile Include="Input_output\Loader.cpp" />
     <ClCompile Include="Thrust_lib\unsigned_distance_function.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Containers\Finder.h" />
     <ClInclude Include="Containers\Space_map2.h" />
     <ClInclude Include="Geometry\Point.h" />
     <ClInclude Include="Input_output\Loader.h" />

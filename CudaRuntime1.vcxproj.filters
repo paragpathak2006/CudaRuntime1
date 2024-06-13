@@ -21,9 +21,6 @@
     <ClCompile Include="Input_output\Loader.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Containers\Finder.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="Containers\Space_map2.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -36,9 +33,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input_output\Loader.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="Containers\Finder.h">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="Containers\Space_map2.h">

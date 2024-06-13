@@ -19,7 +19,6 @@
 
 
 #include "Geometry/Point.h"
-#include "Containers/Finder.h"
 #include "Containers/Space_map2.h"
 #include "Input_output/Loader.h"
 #include "Geometry/Point.h"

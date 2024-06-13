@@ -5,7 +5,6 @@
 #include "../Geometry/Point.h"
 
 float unsigned_distance_brute_force(const Points& points, const Point& target, double beta, int& nearest_point);
-double unsigned_distance_space_map(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
 double unsigned_distance_space_map2(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
 double unsigned_distance_space_map_cuda(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
 

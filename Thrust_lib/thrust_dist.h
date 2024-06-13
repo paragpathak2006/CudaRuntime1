@@ -134,3 +134,28 @@ void custom_undoreded_map_implementation1(const Points& points, Indexes &indexes
         ind.push_back(i);
     }
 }
+
+//struct Index_points
+//{
+//    const Point_Index_Map map;
+//    Index_points(Point_Index_Map _map) : map(_map) {}
+//
+//    __host__ __device__
+//        vector<int> operator()(const Point_index& point_index) {
+//        vector<int> point_indexes(10);
+//        auto range = map.equal_range(point_index);
+//        FOR_RANGE(point, range) {
+//            int point_index = point->second;
+//            point_indexes.push_back(point_index);
+//        }
+//        return point_indexes;
+//    }
+//};
+
+//double get_point_indexes(const thrust::host_vector<Point_indexes>& Px, const Point& target, const double& beta2,const Point_Index_Map &map) {
+//    DPoint points = Px;
+//    thrust::device_vector<vector<int>>  point_indexes(Px.size());
+
+//    // apply the transformation
+//    thrust::transform(_ITER_(points), point_indexes.begin(), Index_points(map));
+//}
