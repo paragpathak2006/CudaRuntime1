@@ -3,6 +3,8 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "../Geometry/Point.h"
+#include "../Containers/Space_map2.h"
+
 typedef thrust::host_vector<double> Hvec;   typedef thrust::host_vector<Point> HPoint;
 typedef thrust::device_vector<double> Dvec; typedef thrust::device_vector<Point> DPoint;
 
@@ -110,4 +112,25 @@ double unsigned_distance_space_map_cuda(const Points& points, const Point& targe
     //}
 //    return min_dist_calculation(X, Y, Z, target, beta2);
 
+}
+
+
+// test code only. not for use
+typedef vector<int> Index;
+typedef vector<Index>   Indexes;
+
+typedef thrust::host_vector<Index>   HIndexes;
+typedef thrust::device_vector<Index> DIndexes;
+
+void custom_undoreded_map_implementation1(const Points& points, Indexes &indexes, double map_size) {
+    for (Index& index : indexes)
+        index.reserve(5);
+
+    for (size_t i = 0; i < points.size(); i++)
+    {
+        Point_index pi = Point_index(points[i], i, map_size);
+        auto x = Hash_of_Point_index()(pi);
+        auto &ind = indexes[x];
+        ind.push_back(i);
+    }
 }

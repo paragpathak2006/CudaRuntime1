@@ -10,8 +10,9 @@
 class Point_index
 {
 public:
-    int x, y, z;
+    int x, y, z, index = -1e5;
     Point_index(int X, int Y, int Z) : x(X), y(Y), z(Z) {}
+    Point_index(int X, int Y, int Z, int _index) : x(X), y(Y), z(Z), index(_index) {}
 
     Point_index(const Point& P, const double& map_size)
     {
@@ -20,7 +21,15 @@ public:
         z = round(P.z / map_size);
     }
 
-    Point_index() { x = 0; y = 0; z = 0; }
+    Point_index(const Point& P, int i, const double& map_size)
+    {
+        x = round(P.x / map_size);
+        y = round(P.y / map_size);
+        z = round(P.z / map_size);
+        index = i;
+    }
+
+    Point_index() { x = 0; y = 0; z = 0; index = -1e5; }
     bool operator==(const Point_index& rhs) const { return x == rhs.x && y == rhs.y && z == rhs.z; }
     void print() const { cout << "(" << x << "," << y << "," << z << ")" << endl; }
     void print2() const { cout << "(" << x << "," << y << "," << z << ")"; }
