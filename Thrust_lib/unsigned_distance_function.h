@@ -2,11 +2,13 @@
 // unsigned_distance_function.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 #pragma once
-#include "Point.h"
+#include "../Geometry/Point.h"
 
 float unsigned_distance_brute_force(const Points& points, const Point& target, double beta, int& nearest_point);
 double unsigned_distance_space_map(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
 double unsigned_distance_space_map2(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
+double unsigned_distance_space_map_cuda(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
+
 void print_output(float dist, int nearest_point, const Point& target, const Points& points);
 void test_local();
 

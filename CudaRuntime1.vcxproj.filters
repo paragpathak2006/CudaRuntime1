@@ -13,32 +13,56 @@
     <Filter Include="Obj">
       <UniqueIdentifier>{b4ec4a8f-1650-4790-b2e5-180efc4f39b7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Headers\Mathematics">
+      <UniqueIdentifier>{40e7510f-fd14-4ea2-9ca2-1df52a302195}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Finder.cpp">
+    <ClCompile Include="Input_output\Loader.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Point.cpp">
+    <ClCompile Include="Containers\Finder.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="Space_map2.cpp">
+    <ClCompile Include="Containers\Space_map2.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Geometry\Point.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Thrust_lib\unsigned_distance_function.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Finder.h">
+    <ClInclude Include="Input_output\Loader.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Loader.h">
+    <ClInclude Include="Containers\Finder.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Point.h">
+    <ClInclude Include="Containers\Space_map2.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="Space_map2.h">
+    <ClInclude Include="Geometry\Point.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="thrust_dist.h">
+    <ClInclude Include="Mathematics\Vector.h">
+      <Filter>Headers\Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Mathematics\DCPQuery.h">
+      <Filter>Headers\Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Mathematics\DistPointTriangle.h">
+      <Filter>Headers\Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Mathematics\Triangle.h">
+      <Filter>Headers\Mathematics</Filter>
+    </ClInclude>
+    <ClInclude Include="Thrust_lib\unsigned_distance_function.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Thrust_lib\thrust_dist.h">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

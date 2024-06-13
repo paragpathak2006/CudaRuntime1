@@ -9,6 +9,7 @@ public:
     double x = 0, y = 0, z = 0;
     Point(double X, double Y, double Z) : x(X), y(Y), z(Z) {}
     Point() { x = 0; y = 0; z = 0; }
+
     Point operator+(const Point& rhs) const { return Point(x + rhs.x, y + rhs.y, z + rhs.z); }
     Point operator-(const Point& rhs) const { 
         return Point(x - rhs.x, y - rhs.y, z - rhs.z); 

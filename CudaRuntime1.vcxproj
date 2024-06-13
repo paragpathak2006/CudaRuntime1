@@ -80,16 +80,23 @@
     <CudaCompile Include="kernel.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Finder.cpp" />
-    <ClCompile Include="Point.cpp" />
-    <ClCompile Include="Space_map2.cpp" />
+    <ClCompile Include="Containers\Finder.cpp" />
+    <ClCompile Include="Containers\Space_map2.cpp" />
+    <ClCompile Include="Geometry\Point.cpp" />
+    <ClCompile Include="Input_output\Loader.cpp" />
+    <ClCompile Include="Thrust_lib\unsigned_distance_function.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Finder.h" />
-    <ClInclude Include="Loader.h" />
-    <ClInclude Include="Point.h" />
-    <ClInclude Include="Space_map2.h" />
-    <ClInclude Include="thrust_dist.h" />
+    <ClInclude Include="Containers\Finder.h" />
+    <ClInclude Include="Containers\Space_map2.h" />
+    <ClInclude Include="Geometry\Point.h" />
+    <ClInclude Include="Input_output\Loader.h" />
+    <ClInclude Include="Mathematics\DCPQuery.h" />
+    <ClInclude Include="Mathematics\DistPointTriangle.h" />
+    <ClInclude Include="Mathematics\Triangle.h" />
+    <ClInclude Include="Mathematics\Vector.h" />
+    <ClInclude Include="Thrust_lib\thrust_dist.h" />
+    <ClInclude Include="Thrust_lib\unsigned_distance_function.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

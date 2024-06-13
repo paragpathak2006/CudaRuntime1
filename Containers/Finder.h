@@ -3,7 +3,7 @@
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
-#include "Point.h"
+#include "../Geometry/Point.h"
 typedef long long int Lint;
 typedef Lint Key;
 typedef pair<int, int> Node_Pair;

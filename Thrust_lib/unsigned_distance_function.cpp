@@ -5,13 +5,58 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include "Point.h"
-#include "Finder.h"
-#include "Space_map2.h"
-#include "Loader.h"
+#include "../Geometry/Point.h"
+#include "../Containers/Finder.h"
+#include "../Containers/Space_map2.h"
+#include "../Input_output/Loader.h"
 #include "unsigned_distance_function.h"
 
 
+float unsigned_distance_brute_force(const Points& points, const Point& target, double beta, int& nearest_point) {
+    nearest_point = -1;
+    float min_dist = target.dist(points[0]);
+    int i = 0;
+    double beta2 = beta * beta;
+    for (const Point& p : points)
+    {
+        float dist = target.dist(p);
+        if (dist < min_dist)
+        {
+            min_dist = dist;
+            nearest_point = i;
+        }
+        i++;
+    }
+    return (min_dist > beta2) ? beta2 : min_dist;
+}
+double unsigned_distance_space_map(const Points& points, const Point& target, double beta, double map_size, int& nearest_point) {
+
+    nearest_point = -1;
+    Space_map::initialize_space_map(/* with input points as */ points,/* map_size as */ map_size, /*  and beta as */ beta);
+    double unsigned_dist = Space_map::search_space_map(points, target, nearest_point);
+    Space_map::make_empty();
+
+    return unsigned_dist;
+}
+
+double unsigned_distance_space_map2(const Points& points, const Point& target, double beta, double map_size, int& nearest_point) {
+
+    nearest_point = -1;
+    Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
+    double unsigned_dist = space_map.search_space_map(points, target, beta, nearest_point);
+    space_map.make_empty();
+    return unsigned_dist;
+}
+
+void print_output(float dist, int nearest_point, const Point& target, const Points& points) {
+    cout << "Unsigned distance : " << sqrt(dist) << endl;
+    cout << "Target point : "; target.print();
+    cout << "Nearest point : ";
+    if (nearest_point >= 0) points[nearest_point].print();
+    else cout << "Point not found!" << endl;
+
+    cout << endl << endl;
+}
 
 void test_local()
 {
@@ -53,6 +98,8 @@ void test_local()
     print_output(dist2, nearest_point2, target, points);
 
 }
+
+
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
 // Debug program: F5 or Debug > Start Debugging menu

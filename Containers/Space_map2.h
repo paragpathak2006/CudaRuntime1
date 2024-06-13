@@ -3,9 +3,10 @@
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
-#include "Point.h"
+#include "../Geometry/Point.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+
 class Point_index
 {
 public:
