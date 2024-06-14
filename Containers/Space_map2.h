@@ -7,6 +7,7 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+
 class Point_index
 {
 public:
@@ -43,7 +44,15 @@ struct Hash_of_Point_index {
     }
 };
 
+struct Bucket {
+    int first, count;
+    Bucket(int _first, int _count) : first(_first), count(_count) {}
+};
+
 typedef unordered_multimap< Point_index, int, Hash_of_Point_index> Point_Index_Map;
+typedef vector<Bucket> Buckets;
+typedef vector<Point_index> Point_indexes;
+
 #define FOR_RANGE(it,range) for(auto& it = range.first; it != range.second; ++it)
 
 class Space_map2
@@ -52,6 +61,8 @@ class Space_map2
 
 public:
     Point_Index_Map point_map;
+    Buckets buckets;
+    Point_indexes point_indexes;
 
     Space_map2(const Points& points, const double& mapsize) {
         initialize_space_map(points, mapsize);
@@ -73,14 +84,6 @@ public:
         for (size_t i = 0; i < num_points; i++)
             add_point(points[i], i);
 
-        //cout << "Points indexed as" << endl;
-        //for (const auto& p : point_map)
-        //{
-        //    p.first.print2(); cout << " -> " << p.second << endl;
-        //}
-        //cout << endl << endl;
-        //vector<int> point_indexes;
-        //lookup_point_region(Point(0, 0, 0.02), point_indexes);
     }
 
     void make_empty() { point_map.empty(); }
@@ -96,26 +99,14 @@ public:
             FOR_RANGE(point, range) {
                 int point_index = point->second;
                 point_indexes.push_back(point_index);
-                //point->first.print();
             }
         }
     }
-
 
     void lookup_region(const Point& target, const double& beta, vector<int>& point_indexes) {
         int max_index = round(beta / map_size);
         Point_index target_index(target,map_size);
         point_indexes.reserve(50);
-
-        //cout << "Target indexed as : " ;target_index.print();
-
-        //cout << "Lookup nearby point at box real dist : " << map_size * max_index << endl;
-        //cout << "Lookup nearby point at box index dist : " << max_index << endl;
-        //cout << "Box dim : " << endl;
-
-        //Point_index(target_index.x + max_index, target_index.y + max_index, target_index.z + max_index).print();
-        //Point_index(target_index.x - max_index, target_index.y - max_index, target_index.z - max_index).print();
-        //cout << endl << endl;
 
         for (int i = target_index.x - max_index; i <= target_index.x + max_index; i++)
         for (int j = target_index.y - max_index; j <= target_index.y + max_index; j++)
@@ -143,6 +134,24 @@ public:
         }
         return (min_dist > beta2) ? beta2 : min_dist;
     }
+
+    void generate_cuda_hashmap() {
+        int first = 0, count = 0;
+        auto bucket_count = point_map.bucket_count();
+
+        for (unsigned i = 0; i < bucket_count; ++i) {
+            count = 0;
+            for (auto local_it = point_map.begin(i); local_it != point_map.end(i); ++local_it)
+            {
+                point_indexes.push_back(local_it->first);
+                count++;
+            }
+            buckets.push_back(Bucket(first, count));
+            first = first + count;
+        }
+
+    }
+
 
     //double search_space_map_parallel(const Points& points, const Point& target, const double& beta, int& nearest_point) {
     //    vector<int> point_indexes;

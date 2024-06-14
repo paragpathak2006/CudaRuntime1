@@ -92,11 +92,11 @@ double unsigned_distance_space_map_cuda(const Points& points, const Point& targe
     Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
 
     vector<int> point_indexes;
-    int n = point_indexes.size();
     double beta2 = beta * beta;
 
     space_map.lookup_region(target, beta, point_indexes);
 
+    int n = point_indexes.size();
     HPoint P(n);
     for (const int& i : point_indexes)
         P.push_back(points[i]);
@@ -121,41 +121,3 @@ typedef vector<Index>   Indexes;
 
 typedef thrust::host_vector<Index>   HIndexes;
 typedef thrust::device_vector<Index> DIndexes;
-
-void custom_undoreded_map_implementation1(const Points& points, Indexes &indexes, double map_size) {
-    for (Index& index : indexes)
-        index.reserve(5);
-
-    for (size_t i = 0; i < points.size(); i++)
-    {
-        Point_index pi = Point_index(points[i], i, map_size);
-        auto x = Hash_of_Point_index()(pi);
-        auto &ind = indexes[x];
-        ind.push_back(i);
-    }
-}
-
-//struct Index_points
-//{
-//    const Point_Index_Map map;
-//    Index_points(Point_Index_Map _map) : map(_map) {}
-//
-//    __host__ __device__
-//        vector<int> operator()(const Point_index& point_index) {
-//        vector<int> point_indexes(10);
-//        auto range = map.equal_range(point_index);
-//        FOR_RANGE(point, range) {
-//            int point_index = point->second;
-//            point_indexes.push_back(point_index);
-//        }
-//        return point_indexes;
-//    }
-//};
-
-//double get_point_indexes(const thrust::host_vector<Point_indexes>& Px, const Point& target, const double& beta2,const Point_Index_Map &map) {
-//    DPoint points = Px;
-//    thrust::device_vector<vector<int>>  point_indexes(Px.size());
-
-//    // apply the transformation
-//    thrust::transform(_ITER_(points), point_indexes.begin(), Index_points(map));
-//}

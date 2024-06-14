@@ -26,8 +26,83 @@
 #include "Thrust_lib/unsigned_distance_function.h"
 
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
-__global__ void addKernel(int *c, const int *a, const int *b){int i = threadIdx.x;c[i] = a[i] + b[i];}
 
+__global__ 
+void addKernel(int *c, const int *a, const int *b){
+    int i = threadIdx.x;
+    c[i] = a[i] + b[i];
+}
+#define _CAST_(P) thrust::raw_pointer_cast(P.data())
+#define _RAW_CAST_(P,Q,R,S) _CAST_(P) ,_CAST_(Q) , _CAST_(R) , _CAST_(S)  
+
+__global__
+void calculate_min_dist(
+    Bucket* buckets, Point_index* indexes, Point* points, double* min_distances,
+    Point target, double beta2,
+    int imax, int jmax, int kmax,
+    int i0, int j0, int k0);
+
+double custom_hash_map_implementation(const Points& points, const Point& target, double map_size,double beta) 
+{
+    Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
+    space_map.generate_cuda_hashmap();
+    auto pi = Point_index(target, map_size);
+    auto beta2 = beta * beta;
+    int max_index = round(beta / map_size);
+    int n = 8 * max_index * max_index * max_index;
+
+    int threads_per_block = 256;
+    int blocks_per_grid = (n + threads_per_block - 1) / threads_per_block;
+
+    thrust::device_vector<Bucket> buckets(space_map.buckets);
+    thrust::device_vector<Point_index> point_indexes(space_map.point_indexes);
+    thrust::device_vector<Point> Dpoints(points);
+    thrust::device_vector<double> min_distances(n);
+
+    calculate_min_dist<<<blocks_per_grid, threads_per_block >>>(
+        _RAW_CAST_(buckets, point_indexes, Dpoints, min_distances),
+        target, beta*beta,
+        2*max_index, 2 * max_index, 2 * max_index,
+        pi.x - max_index, pi.y - max_index, pi.z - max_index
+        );
+
+    return thrust::reduce(_ITER_(min_distances), beta2, min_dist());
+
+}
+
+__device__
+size_t hash_of_point_index(int i, int j, int k) {
+    return (i * 18397) + (j * 20483) + (k * 29303);
+}
+#define _DIS_(P,Q) (P.x-Q.x)*(P.x-Q.x) + (P.y-Q.y)*(P.y-Q.y) + (P.z-Q.z)*(P.z-Q.z) 
+__global__ 
+void calculate_min_dist(
+    Bucket* buckets, Point_index* indexes, Point* points, double* min_distances,
+    Point target, double beta2, 
+    int imax, int jmax, int kmax,
+    int i0,int j0,int k0)
+{
+    int temp = threadIdx.x / imax;
+    int i = threadIdx.x % imax + i0;
+    int j = temp % jmax + j0;
+    int k = temp / jmax + k0;
+
+    int bucket_i = hash_of_point_index(i, j, k);
+
+    int first = buckets[bucket_i].first;
+    int count = buckets[bucket_i].count;
+
+    double min_distance, dist;
+    min_distance = beta2;
+    for (size_t i = first; i < count; i++)
+    {
+        if (indexes[i].x == i && indexes[i].y == j && indexes[i].z == k)
+            dist = _DIS_(points[indexes[i].index], target);
+            min_distance = (min_distance < dist) ? min_distance : dist;
+    };
+
+    min_distances[i + j*imax + k*imax*jmax] = min_distance;
+}
 
 int main()
 {
