@@ -38,8 +38,7 @@ void addKernel(int *c, const int *a, const int *b){
 __global__
 void calculate_min_dist(
     Bucket* buckets, Point_index* indexes, Point* points, double* min_distances,
-    Point target, double beta2, int bucket_count,
-    int imax, int jmax, int kmax,
+    Point target, double beta2, int bucket_count, int imax, 
     int i0, int j0, int k0);
 
 double custom_hash_map_implementation(const Points& points, const Point& target, double map_size,double beta) 
@@ -50,20 +49,26 @@ double custom_hash_map_implementation(const Points& points, const Point& target,
     auto beta2 = beta * beta;
     auto bucket_count = space_map.buckets.size();
     int max_index = round(beta / map_size);
-    int n = 8 * max_index * max_index * max_index;
 
-    int threads_per_block = 256;
-    int blocks_per_grid = (n + threads_per_block - 1) / threads_per_block;
+    //int n = 8 * max_index * max_index * max_index;
+    //int threads_per_block = 256;
+    //int blocks_per_grid = (n + threads_per_block - 1) / threads_per_block;
+
+    int n = 2 * max_index;
+    int threads_per_block_x = 4;
+    int blocks_per_grid_x = (n + threads_per_block_x - 1) / threads_per_block_x;
+
+    dim3 threads_per_block(threads_per_block_x, threads_per_block_x, threads_per_block_x);
+    dim3 blocks_per_grid(blocks_per_grid_x, blocks_per_grid_x, blocks_per_grid_x);
 
     thrust::device_vector<Bucket> buckets(space_map.buckets);
     thrust::device_vector<Point_index> point_indexes(space_map.point_indexes);
     thrust::device_vector<Point> Dpoints(points);
-    thrust::device_vector<double> min_distances(n);
+    thrust::device_vector<double> min_distances(n*n*n);
 
     calculate_min_dist << <blocks_per_grid, threads_per_block >> > (
         _RAW_CAST_(buckets, point_indexes, Dpoints, min_distances),
-        target, beta2, bucket_count,
-        2 * max_index, 2 * max_index, 2 * max_index,
+        target, beta2, bucket_count, 2 * max_index,
         pi.x - max_index, pi.y - max_index, pi.z - max_index
         );
 
@@ -79,16 +84,22 @@ size_t hash_of_point_index(int i, int j, int k) {
 __global__ 
 void calculate_min_dist(
     Bucket* buckets, Point_index* indexes, Point* points, double* min_distances,
-    Point target, double beta2, int bucket_count,
-    int imax, int jmax, int kmax,
+    Point target, double beta2, int bucket_count, int n,
     int i0,int j0,int k0)
 {
-    int temp = threadIdx.x / imax;
-    int i = threadIdx.x % imax + i0;
-    int j = temp % jmax + j0;
-    int k = temp / jmax + k0;
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-    int bucket_i = hash_of_point_index(i, j, k) % bucket_count;
+    if (i >= n || j >= n || k >= n)
+        return;
+
+    //int temp = threadIdx.x / imax;
+    //int i = threadIdx.x % imax + i0;
+    //int j = temp % jmax + j0;
+    //int k = temp / jmax + k0;
+
+    int bucket_i = hash_of_point_index(i0 + i, j0 + j, k0 + k) % bucket_count;
 
     int first = buckets[bucket_i].first;
     int count = buckets[bucket_i].count;
@@ -102,7 +113,7 @@ void calculate_min_dist(
             min_distance = (min_distance < dist) ? min_distance : dist;
     };
 
-    min_distances[i + j*imax + k*imax*jmax] = min_distance;
+    min_distances[i + j*n + k*n*n] = min_distance;
 }
 
 int main()
