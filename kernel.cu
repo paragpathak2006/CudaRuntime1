@@ -38,7 +38,7 @@ void addKernel(int *c, const int *a, const int *b){
 __global__
 void calculate_min_dist(
     Bucket* buckets, Point_index* indexes, Point* points, double* min_distances,
-    Point target, double beta2,
+    Point target, double beta2, int bucket_count,
     int imax, int jmax, int kmax,
     int i0, int j0, int k0);
 
@@ -48,6 +48,7 @@ double custom_hash_map_implementation(const Points& points, const Point& target,
     space_map.generate_cuda_hashmap();
     auto pi = Point_index(target, map_size);
     auto beta2 = beta * beta;
+    auto bucket_count = space_map.buckets.size();
     int max_index = round(beta / map_size);
     int n = 8 * max_index * max_index * max_index;
 
@@ -59,10 +60,10 @@ double custom_hash_map_implementation(const Points& points, const Point& target,
     thrust::device_vector<Point> Dpoints(points);
     thrust::device_vector<double> min_distances(n);
 
-    calculate_min_dist<<<blocks_per_grid, threads_per_block >>>(
+    calculate_min_dist << <blocks_per_grid, threads_per_block >> > (
         _RAW_CAST_(buckets, point_indexes, Dpoints, min_distances),
-        target, beta*beta,
-        2*max_index, 2 * max_index, 2 * max_index,
+        target, beta2, bucket_count,
+        2 * max_index, 2 * max_index, 2 * max_index,
         pi.x - max_index, pi.y - max_index, pi.z - max_index
         );
 
@@ -78,7 +79,7 @@ size_t hash_of_point_index(int i, int j, int k) {
 __global__ 
 void calculate_min_dist(
     Bucket* buckets, Point_index* indexes, Point* points, double* min_distances,
-    Point target, double beta2, 
+    Point target, double beta2, int bucket_count,
     int imax, int jmax, int kmax,
     int i0,int j0,int k0)
 {
@@ -87,11 +88,11 @@ void calculate_min_dist(
     int j = temp % jmax + j0;
     int k = temp / jmax + k0;
 
-    int bucket_i = hash_of_point_index(i, j, k);
+    int bucket_i = hash_of_point_index(i, j, k) % bucket_count;
 
     int first = buckets[bucket_i].first;
     int count = buckets[bucket_i].count;
-
+     
     double min_distance, dist;
     min_distance = beta2;
     for (size_t i = first; i < count; i++)
