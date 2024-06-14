@@ -49,7 +49,7 @@ double custom_hash_map_implementation(const Points& points, const Point& target,
     auto beta2 = beta * beta;
     auto bucket_count = space_map.buckets.size();
     int max_index = round(beta / map_size);
-
+    max_index = max_index + max_index % 2;
     //int n = 8 * max_index * max_index * max_index;
     //int threads_per_block = 256;
     //int blocks_per_grid = (n + threads_per_block - 1) / threads_per_block;
@@ -118,6 +118,10 @@ void calculate_min_dist(
 
 int main()
 {
+    int n = 5;
+    int p = 5 / 3;
+    cout << 5.0 / 3.0<<endl;
+    cout << p << endl;
     const int arraySize = 5;
     const int a[arraySize] = { 1, 2, 3, 4, 5 };
     const int b[arraySize] = { 10, 20, 30, 40, 50 };
