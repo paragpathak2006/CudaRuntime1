@@ -118,10 +118,6 @@ void calculate_min_dist(
 
 int main()
 {
-    int n = 5;
-    int p = 5 / 3;
-    cout << 5.0 / 3.0<<endl;
-    cout << p << endl;
     const int arraySize = 5;
     const int a[arraySize] = { 1, 2, 3, 4, 5 };
     const int b[arraySize] = { 10, 20, 30, 40, 50 };
