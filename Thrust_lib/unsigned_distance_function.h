@@ -15,7 +15,7 @@ void print_output(float dist, int nearest_point, const Point& target, const Poin
 void test_local();
 
 __device__ __host__
-double get_nearest_point(const Point& P0, const Point& P1, const Point& P2, const Point& target);
+double get_nearest_point_dist(const Point& P0, const Point& P1, const Point& P2, const Point& target);
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
 // Debug program: F5 or Debug > Start Debugging menu

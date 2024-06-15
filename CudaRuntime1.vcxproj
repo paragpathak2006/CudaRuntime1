@@ -81,12 +81,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Containers\Space_map2.cpp" />
+    <ClCompile Include="Geometry\Face.cpp" />
     <ClCompile Include="Geometry\Point.cpp" />
     <ClCompile Include="Input_output\Loader.cpp" />
     <ClCompile Include="Thrust_lib\unsigned_distance_function.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Containers\Space_map2.h" />
+    <ClInclude Include="Geometry\Face.h" />
     <ClInclude Include="Geometry\Point.h" />
     <ClInclude Include="Input_output\Loader.h" />
     <ClInclude Include="Mathematics\DCPQuery.h" />

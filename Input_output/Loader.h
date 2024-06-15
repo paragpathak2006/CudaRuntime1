@@ -16,8 +16,9 @@
 // Math.h - STD math Library
 #include <math.h>
 
-// Math.h - STD math Library
+// Geometry
 #include "../Geometry/Point.h"
+#include "../Geometry/Face.h"
 
 // Print progress to console while loading (large models)
 #define OBJL_CONSOLE_OUTPUT
@@ -1032,4 +1033,5 @@ namespace objl
 
 void get_mesh(const std::string& file, objl::Mesh& mesh);
 void get_points(const objl::Mesh& curMesh, Points& points);
+void get_faces(const objl::Mesh& curMesh, Faces& faces);
 void test_load_file();

@@ -90,7 +90,7 @@ void test_local()
 }
 
 __device__ __host__
-double get_nearest_point(const Point& P0, const Point& P1, const Point& P2, const Point& target) {
+double get_nearest_point_dist(const Point& P0, const Point& P1, const Point& P2, const Point& target) {
     double zero = 0.0;
     double one = 1.0;
     double two = 2.0;

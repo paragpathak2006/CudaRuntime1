@@ -210,6 +210,11 @@ void get_points(const objl::Mesh& curMesh, Points& points) {
 		points.emplace_back(curMesh.Vertices[j].Position.X, curMesh.Vertices[j].Position.Y, curMesh.Vertices[j].Position.Z);
 }
 
+void get_faces(const objl::Mesh& curMesh, Faces& faces) {
+	for (int j = 0; j < curMesh.Indices.size(); j += 3)
+		Face(curMesh.Indices[j], curMesh.Indices[j + 1], curMesh.Indices[j + 2]);
+}
+
 
 void test_load_file() {
 

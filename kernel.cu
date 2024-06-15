@@ -137,11 +137,11 @@ int main()
     double beta = 2;
     double map_size = 0.5;
     // Points points = {Point(0,0,0),Point(0,0,1),Point(0,1,1),Point(0,1,0)};
-    Points points;
+    
 
-    objl::Mesh mesh;
-    get_mesh("3DObjects/piston.obj", mesh);
-    get_points(mesh, points);
+    objl::Mesh mesh;    get_mesh("3DObjects/piston.obj", mesh);
+    Points points;      get_points(mesh, points);
+    Faces faces;        get_faces(mesh, faces);
 
     int nearest_point0 = -1;
     int nearest_point1 = -1;

@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include "../Geometry/Point.h"
+#include "../Geometry/Face.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
@@ -53,7 +54,10 @@ typedef vector<Bucket> Buckets;
 typedef vector<Point_index> Point_indexes;
 
 #define FOR_RANGE(it,range) for(auto& it = range.first; it != range.second; ++it)
-
+#define _MAX2_(A,B) ((A > B) ? A : B) 
+#define _MIN2_(A,B) ((A < B) ? A : B) 
+#define _MAX3_(A,B,C) (A > B) ? _MAX2_(A,C) : _MAX2_(B,C)
+#define _MIN3_(A,B,C) (A < B) ? _MIN2_(A,C) : _MIN2_(B,C)
 class Space_map2
 {
     double map_size;
@@ -69,6 +73,29 @@ public:
 
         for (size_t i = 0; i < num_points; i++)
             point_map.emplace(Point_index(points[i], i, map_size), i);
+    }
+
+
+    Space_map2(const Faces faces, const Points& points, const double& mapsize) {
+        int num_faces = points.size();
+        map_size = mapsize;
+        point_map.reserve(num_faces * 5);
+
+        for (size_t iFace = 0; iFace < num_faces; iFace++) {
+            Point_index p0 = Point_index(points[faces[iFace].v[0]], iFace, map_size);
+            Point_index p1 = Point_index(points[faces[iFace].v[1]], iFace, map_size);
+            Point_index p2 = Point_index(points[faces[iFace].v[2]], iFace, map_size);
+
+            int px_min = _MIN3_(p0.x, p1.x, p2.x);            int px_max = _MAX3_(p0.x, p1.x, p2.x);
+            int py_min = _MIN3_(p0.y, p1.y, p2.y);            int py_max = _MAX3_(p0.y, p1.y, p2.y);
+            int pz_min = _MIN3_(p0.z, p1.z, p2.z);            int pz_max = _MAX3_(p0.z, p1.z, p2.z);
+
+            for (int i = px_min; i <= px_max; i++)
+            for (int j = py_min; j <= py_max; j++)
+            for (int k = pz_min; k <= pz_max; k++)
+                point_map.emplace(Point_index(i,j,k, iFace), iFace);
+
+        }
     }
 
     void generate_cuda_hashmap() {
