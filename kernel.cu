@@ -131,18 +131,19 @@ double cuda_hash_map_implementation(const Points& points, const Point& target, d
     int num_threads = 2 * max_index;
     int threads_dim = 4;
     int blocks_dim = _CALC_BLOCK_DIM_(num_threads,threads_dim);
+    int dim = threads_dim * blocks_dim;
     dim3 threads_per_block(_DIM3_(threads_dim));
     dim3 blocks_per_grid(_DIM3_(blocks_dim));
 
     thrust::device_vector<Bucket>       buckets = space_map.buckets;
     thrust::device_vector<Point_index>  point_indexes = space_map.point_indexes;
     thrust::device_vector<Point>        Dpoints = points;
-    thrust::device_vector<double>       min_distances(_CUBE_(threads_dim)*_CUBE_(blocks_dim));
+    thrust::device_vector<double>       min_distances(_CUBE_(dim));
 
     calculate_min_dist << <blocks_per_grid, threads_per_block >> > (
         _RAW_CAST_(buckets, point_indexes, Dpoints, min_distances),
         target, beta2, bucket_count, threads_dim * blocks_dim,
-        target_index.x - max_index, target_index.y - max_index, target_index.z - max_index
+        target_index.x - dim/2, target_index.y - dim/2, target_index.z - dim/2
         );
 
     return thrust::reduce(_ITER_(min_distances), beta2, min_dist());
@@ -159,8 +160,8 @@ double cuda_hash_map_implementation(const Faces& faces, const Points& points, co
     int max_index = _MAP_INDEX_(beta, map_size); max_index = max_index + max_index % 2;
     int num_threads = 2 * max_index;
     int threads_dim = 4;
-
     int blocks_dim = _CALC_BLOCK_DIM_(num_threads, threads_dim);
+    int dim = threads_dim * blocks_dim;
     dim3 threads_per_block(_DIM3_(threads_dim));
     dim3 blocks_per_grid(_DIM3_(blocks_dim));
 
@@ -168,12 +169,12 @@ double cuda_hash_map_implementation(const Faces& faces, const Points& points, co
     thrust::device_vector<Point_index>  point_indexes = space_map.point_indexes;
     thrust::device_vector<Point>        Dpoints = points;
     thrust::device_vector<Face>         Dfaces = faces;
-    thrust::device_vector<double>       min_distances(_CUBE_(threads_dim) * _CUBE_(blocks_dim));
+    thrust::device_vector<double>       min_distances(_CUBE_(dim));
 
     calculate_min_dist << <blocks_per_grid, threads_per_block >> > (
         _RAW_CAST_5_(buckets, point_indexes,Dfaces, Dpoints, min_distances),
         target, beta2, bucket_count, threads_dim * blocks_dim,
-        target_index.x - max_index, target_index.y - max_index, target_index.z - max_index
+        target_index.x - dim / 2, target_index.y - dim / 2, target_index.z - dim / 2
         );
 
     return thrust::reduce(_ITER_(min_distances), beta2, min_dist());
