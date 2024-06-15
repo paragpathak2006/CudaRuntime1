@@ -89,6 +89,168 @@ void test_local()
 
 }
 
+__device__ __host__
+double get_nearest_point(const Point& P0, const Point& P1, const Point& P2, const Point& target) {
+    double zero = 0.0;
+    double one = 1.0;
+    double two = 2.0;
+    Point diff = P0 - target;
+    Point edge0 = P1 - P0;
+    Point edge1 = P2 - P0;
+    double  a00 = _DOT_(edge0, edge0);
+    double  a01 = _DOT_(edge0, edge1);
+    double  a11 = _DOT_(edge1, edge1);
+    double  b0 = _DOT_(diff, edge0);
+    double  b1 = _DOT_(diff, edge1);
+    double  det = std::max(a00 * a11 - a01 * a01, zero);
+    double  s = a01 * b1 - a11 * b0;
+    double  t = a01 * b0 - a00 * b1;
+
+    if (s + t <= det)
+    {
+        if (s < zero)
+        {
+            if (t < zero)  // region 4
+            {
+                if (b0 < zero)
+                {
+                    t = zero;
+                    if (-b0 >= a00)
+                        s = one;
+                    else
+                        s = -b0 / a00;
+                }
+                else
+                {
+                    s = zero;
+                    if (b1 >= zero)
+                        t = zero;
+                    else if (-b1 >= a11)
+                        t = one;
+                    else
+                        t = -b1 / a11;
+                }
+            }
+            else  // region 3
+            {
+                s = zero;
+                if (b1 >= zero)
+                    t = zero;
+                else if (-b1 >= a11)
+                    t = one;
+                else
+                    t = -b1 / a11;
+            }
+        }
+        else if (t < zero)  // region 5
+        {
+            t = zero;
+            if (b0 >= zero)
+                s = zero;
+            else if (-b0 >= a00)
+                s = one;
+            else
+                s = -b0 / a00;
+        }
+        else  // region 0
+        {
+            // minimum at interior point
+            s /= det;
+            t /= det;
+        }
+    }
+    else
+    {
+        double tmp0{}, tmp1{}, numer{}, denom{};
+
+        if (s < zero)  // region 2
+        {
+            tmp0 = a01 + b0;
+            tmp1 = a11 + b1;
+            if (tmp1 > tmp0)
+            {
+                numer = tmp1 - tmp0;
+                denom = a00 - two * a01 + a11;
+                if (numer >= denom)
+                {
+                    s = one;
+                    t = zero;
+                }
+                else
+                {
+                    s = numer / denom;
+                    t = one - s;
+                }
+            }
+            else
+            {
+                s = zero;
+                if (tmp1 <= zero)
+                    t = one;
+                else if (b1 >= zero)
+                    t = zero;
+                else
+                    t = -b1 / a11;
+            }
+        }
+        else if (t < zero)  // region 6
+        {
+            tmp0 = a01 + b1;
+            tmp1 = a00 + b0;
+            if (tmp1 > tmp0)
+            {
+                numer = tmp1 - tmp0;
+                denom = a00 - two * a01 + a11;
+                if (numer >= denom)
+                {
+                    t = one;
+                    s = zero;
+                }
+                else
+                {
+                    t = numer / denom;
+                    s = one - t;
+                }
+            }
+            else
+            {
+                t = zero;
+                if (tmp1 <= zero)
+                    s = one;
+                else if (b0 >= zero)
+                    s = zero;
+                else
+                    s = -b0 / a00;
+            }
+        }
+        else  // region 1
+        {
+            numer = a11 + b1 - a01 - b0;
+            if (numer <= zero)
+            {
+                s = zero;
+                t = one;
+            }
+            else
+            {
+                denom = a00 - two * a01 + a11;
+                if (numer >= denom)
+                {
+                    s = one;
+                    t = zero;
+                }
+                else
+                {
+                    s = numer / denom;
+                    t = one - s;
+                }
+            }
+        }
+    }
+    
+    auto res = P0 + edge0 * s + edge1 * t;
+    return _DISTANCE_(res,target);
+}
 
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

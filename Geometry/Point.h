@@ -9,7 +9,7 @@ using namespace std;
 #define _HASH_(i,j,k) ((i) * 18397 + (j) * 20483 + (k) * 29303)
 #define _DIST_(P,Q,i) (P.i - Q.i) * (P.i - Q.i) 
 #define _DISTANCE_(P,Q) _DIST_(P,Q,x) + _DIST_(P,Q,y) + _DIST_(P,Q,z) 
-
+#define _DOT_(P,Q) P.x * Q.x + P.y * Q.y + P.z * Q.z
 class Point {
 public:
     double x = 0, y = 0, z = 0;
@@ -20,6 +20,7 @@ public:
     Point operator-(const Point& rhs) const { 
         return Point(x - rhs.x, y - rhs.y, z - rhs.z); 
     }
+
     Point operator/(double d) { return Point(x / d, y / d, z / d); }
     Point operator*(double d) { return Point(x * d, y * d, z * d); }
     bool operator==(Point rhs) { return x == rhs.x && y == rhs.y && z == rhs.z; }

@@ -88,8 +88,6 @@ public:
 
     }
 
-    void make_empty() { point_map.empty(); }
-
     void lookup_point_region(const Point_index& P, vector<int>& point_indexes) {
         auto count = point_map.count(P);
 
@@ -131,6 +129,11 @@ public:
         }
         return (min_dist > beta2) ? beta2 : min_dist;
     }
+
+    bool make_empty() {
+        return point_map.empty();
+    }
+
 
     //double search_space_map_parallel(const Points& points, const Point& target, const double& beta, int& nearest_point) {
     //    vector<int> point_indexes;
