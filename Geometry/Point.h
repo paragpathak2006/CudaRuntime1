@@ -3,6 +3,12 @@
 #include <string>
 #include <vector>
 using namespace std;
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
+#define _HASH_(i,j,k) ((i) * 18397 + (j) * 20483 + (k) * 29303)
+#define _DIST_(P,Q,i) (P.i - Q.i) * (P.i - Q.i) 
+#define _DISTANCE_(P,Q) _DIST_(P,Q,x) + _DIST_(P,Q,y) + _DIST_(P,Q,z) 
 
 class Point {
 public:
@@ -27,6 +33,10 @@ public:
 
     void print() const { cout << "(" << x << "," << y << "," << z << ")" <<endl; }
 
+    __host__ __device__
+        size_t get_hash(const double& map_size) const {
+        return _HASH_(round(x / map_size), round(y / map_size), round(z / map_size));
+    }
 
     //Vector2D rotate_90(Vector2D v) { return Vector2D(-v.y, v.x); }
     //Point get_normal(Point P1, Point P3) {        return (*this * 2 - P1 - P3) * sense(P1, P3) / 2;    }
@@ -55,9 +65,9 @@ public:
     double length() const { 
         return x * x + y * y + z * z; 
     };
+
     double dist(const Point &p) const { 
-        auto p0 = *this - p;
-        return p0.length(); 
+        return (x - p.x) * (x - p.x) + (y - p.y) * (y - p.y) + (z - p.z) * (z - p.z);
     };
 
     Point unity() {

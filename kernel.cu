@@ -17,7 +17,6 @@
 #include <thrust/functional.h>
 #include <thrust/reduce.h>
 
-
 #include "Geometry/Point.h"
 #include "Containers/Space_map2.h"
 #include "Input_output/Loader.h"
@@ -32,88 +31,73 @@ void addKernel(int *c, const int *a, const int *b){
     int i = threadIdx.x;
     c[i] = a[i] + b[i];
 }
-#define _CAST_(P) thrust::raw_pointer_cast(P.data())
-#define _RAW_CAST_(P,Q,R,S) _CAST_(P) ,_CAST_(Q) , _CAST_(R) , _CAST_(S)  
-
+#define _MINIMUM_(A,B) A < B ? A : B
+#define _LINEAR_INDEX_(i,j,k,dim) i + j * dim + k * dim * dim
 __global__
 void calculate_min_dist(
-    Bucket* buckets, Point_index* indexes, Point* points, double* min_distances,
-    Point target, double beta2, int bucket_count, int imax, 
-    int i0, int j0, int k0);
-
-double custom_hash_map_implementation(const Points& points, const Point& target, double map_size,double beta) 
-{
-    Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
-    space_map.generate_cuda_hashmap();
-    auto pi = Point_index(target, map_size);
-    auto beta2 = beta * beta;
-    auto bucket_count = space_map.buckets.size();
-    int max_index = round(beta / map_size);
-    max_index = max_index + max_index % 2;
-    //int n = 8 * max_index * max_index * max_index;
-    //int threads_per_block = 256;
-    //int blocks_per_grid = (n + threads_per_block - 1) / threads_per_block;
-
-    int n = 2 * max_index;
-    int threads_per_block_x = 4;
-    int blocks_per_grid_x = (n + threads_per_block_x - 1) / threads_per_block_x;
-
-    dim3 threads_per_block(threads_per_block_x, threads_per_block_x, threads_per_block_x);
-    dim3 blocks_per_grid(blocks_per_grid_x, blocks_per_grid_x, blocks_per_grid_x);
-
-    thrust::device_vector<Bucket> buckets(space_map.buckets);
-    thrust::device_vector<Point_index> point_indexes(space_map.point_indexes);
-    thrust::device_vector<Point> Dpoints(points);
-    thrust::device_vector<double> min_distances(n*n*n);
-
-    calculate_min_dist << <blocks_per_grid, threads_per_block >> > (
-        _RAW_CAST_(buckets, point_indexes, Dpoints, min_distances),
-        target, beta2, bucket_count, 2 * max_index,
-        pi.x - max_index, pi.y - max_index, pi.z - max_index
-        );
-
-    return thrust::reduce(_ITER_(min_distances), beta2, min_dist());
-
-}
-
-__device__
-size_t hash_of_point_index(int i, int j, int k) {
-    return (i * 18397) + (j * 20483) + (k * 29303);
-}
-#define _DIS_(P,Q) (P.x-Q.x)*(P.x-Q.x) + (P.y-Q.y)*(P.y-Q.y) + (P.z-Q.z)*(P.z-Q.z) 
-__global__ 
-void calculate_min_dist(
-    Bucket* buckets, Point_index* indexes, Point* points, double* min_distances,
-    Point target, double beta2, int bucket_count, int n,
-    int i0,int j0,int k0)
+    const Bucket* buckets, const Point_index* indexes, const Point* points, double* min_distances,
+    Point target, double beta2, int bucket_count, int dim,
+    int i0, int j0, int k0)
 {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     int k = threadIdx.z + blockIdx.z * blockDim.z;
 
-    if (i >= n || j >= n || k >= n)
+    if (i >= dim || j >= dim || k >= dim)
         return;
 
-    //int temp = threadIdx.x / imax;
-    //int i = threadIdx.x % imax + i0;
-    //int j = temp % jmax + j0;
-    //int k = temp / jmax + k0;
+    int bucket_index = _HASH_(i0 + i, j0 + j, k0 + k) % bucket_count;
 
-    int bucket_i = hash_of_point_index(i0 + i, j0 + j, k0 + k) % bucket_count;
+    int first = buckets[bucket_index].first;
+    int count = buckets[bucket_index].count;
+    double min_distance = beta2, dist;
 
-    int first = buckets[bucket_i].first;
-    int count = buckets[bucket_i].count;
-     
-    double min_distance, dist;
-    min_distance = beta2;
-    for (size_t i = first; i < count; i++)
+    for (size_t iter = first; iter < count; iter++)
     {
-        if (indexes[i].x == i && indexes[i].y == j && indexes[i].z == k)
-            dist = _DIS_(points[indexes[i].index], target);
-            min_distance = (min_distance < dist) ? min_distance : dist;
-    };
+        const Point_index& p = indexes[iter];
+        if (p.x == i && p.y == j && p.z == k)
+            dist = _DISTANCE_(points[p.index], target);
 
-    min_distances[i + j*n + k*n*n] = min_distance;
+        min_distance = _MINIMUM_(min_distance, dist);
+    }
+    min_distances[_LINEAR_INDEX_(i, j, k, dim)] = min_distance;
+}
+
+
+#define _DIM3_(x) x,x,x
+#define _CALC_BLOCK_DIM_(n,t) (n+t-1)/t
+#define _MAP_INDEX_(x,y) round(x/y)
+#define _CAST_(P) thrust::raw_pointer_cast(P.data())
+#define _RAW_CAST_(P,Q,R,S) _CAST_(P) ,_CAST_(Q) , _CAST_(R) , _CAST_(S)
+double custom_hash_map_implementation(const Points& points, const Point& target, double map_size,double beta)
+{
+    Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
+    space_map.generate_cuda_hashmap();
+    auto target_index = Point_index(target, map_size);
+    auto beta2 = beta * beta;
+    auto bucket_count = space_map.buckets.size();
+    int max_index = _MAP_INDEX_(beta,map_size);
+    max_index = max_index + max_index % 2;
+
+    int num_threads = 2 * max_index;
+    int threads_dim = 4;
+    int blocks_dim = _CALC_BLOCK_DIM_(num_threads,threads_dim);
+    dim3 threads_per_block(_DIM3_(threads_dim));
+    dim3 blocks_per_grid(_DIM3_(blocks_dim));
+
+    thrust::device_vector<Bucket> buckets(space_map.buckets);
+    thrust::device_vector<Point_index> point_indexes(space_map.point_indexes);
+    thrust::device_vector<Point> Dpoints(points);
+    thrust::device_vector<double> min_distances(num_threads * num_threads * num_threads);
+
+    calculate_min_dist << <blocks_per_grid, threads_per_block >> > (
+        _RAW_CAST_(buckets, point_indexes, Dpoints, min_distances),
+        target, beta2, bucket_count, 2 * max_index,
+        target_index.x - max_index, target_index.y - max_index, target_index.z - max_index
+        );
+
+    return thrust::reduce(_ITER_(min_distances), beta2, min_dist());
+
 }
 
 int main()
