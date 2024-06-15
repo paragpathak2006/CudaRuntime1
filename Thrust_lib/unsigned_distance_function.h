@@ -4,18 +4,12 @@
 #pragma once
 #include "../Geometry/Point.h"
 
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 float unsigned_distance_brute_force(const Points& points, const Point& target, double beta, int& nearest_point);
 double unsigned_distance_space_map2(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
 double unsigned_distance_space_map_cuda(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
 
 void print_output(float dist, int nearest_point, const Point& target, const Points& points);
 void test_local();
-
-__device__ __host__
-double get_nearest_point_dist(const Point& P0, const Point& P1, const Point& P2, const Point& target);
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
 // Debug program: F5 or Debug > Start Debugging menu
