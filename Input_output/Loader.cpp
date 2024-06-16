@@ -206,13 +206,17 @@ void get_mesh(const std::string& file, objl::Mesh& mesh) {
 }
 
 void get_points(const objl::Mesh& curMesh, Points& points) {
-	for (int j = 0; j < curMesh.Vertices.size(); j++)
+	int length = curMesh.Vertices.size();
+	points.reserve(length);
+	for (int j = 0; j < length; j++)
 		points.emplace_back(curMesh.Vertices[j].Position.X, curMesh.Vertices[j].Position.Y, curMesh.Vertices[j].Position.Z);
 }
 
 void get_faces(const objl::Mesh& curMesh, Faces& faces) {
-	for (int j = 0; j < curMesh.Indices.size(); j += 3)
-		Face(curMesh.Indices[j], curMesh.Indices[j + 1], curMesh.Indices[j + 2]);
+	int length = curMesh.Vertices.size();
+	faces.reserve(length);
+	for (int j = 0; j < length; j += 3)
+		faces.emplace_back(curMesh.Indices[j], curMesh.Indices[j + 1], curMesh.Indices[j + 2]);
 }
 
 

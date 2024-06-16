@@ -54,6 +54,7 @@ typedef vector<Bucket> Buckets;
 typedef vector<Point_index> Point_indexes;
 
 #define FOR_RANGE(it,range) for(auto& it = range.first; it != range.second; ++it)
+#define FOR_ITER(local_it,point_map) for (auto local_it = point_map.begin(i); local_it != point_map.end(i); ++local_it)
 #define _MAX2_(A,B) ((A > B) ? A : B) 
 #define _MIN2_(A,B) ((A < B) ? A : B) 
 #define _MAX3_(A,B,C) (A > B) ? _MAX2_(A,C) : _MAX2_(B,C)
@@ -99,18 +100,17 @@ public:
     }
 
     void generate_cuda_hashmap() {
-        int first = 0, count = 0;
+        int first_item = 0, count_items = 0;
         auto bucket_count = point_map.bucket_count();
 
         for (unsigned i = 0; i < bucket_count; ++i) {
-            count = 0;
-            for (auto local_it = point_map.begin(i); local_it != point_map.end(i); ++local_it)
-            {
-                point_indexes.push_back(local_it->first);
-                count++;
+            count_items = 0;
+            for (auto iter = point_map.begin(i); iter != point_map.end(i); ++iter) {
+                point_indexes.push_back(iter->first);
+                count_items++;
             }
-            buckets.push_back(Bucket(first, count));
-            first = first + count;
+            buckets.push_back(Bucket(first_item, count_items));
+            first_item = first_item + count_items;
         }
 
     }
@@ -127,14 +127,18 @@ public:
         }
     }
 
+
     void get_nearby_candidate_points(const Point& target, const double& beta, vector<int>& point_indexes) {
         int max_index = round(beta / map_size);
         Point_index target_index(target,map_size);
         point_indexes.reserve(50);
+        int imin = target_index.x - max_index;        int imax = target_index.x + max_index;
+        int jmin = target_index.y - max_index;        int jmax = target_index.y + max_index;
+        int kmin = target_index.z - max_index;        int kmax = target_index.z + max_index;
 
-        for (int i = target_index.x - max_index; i <= target_index.x + max_index; i++)
-        for (int j = target_index.y - max_index; j <= target_index.y + max_index; j++)
-        for (int k = target_index.z - max_index; k <= target_index.z + max_index; k++)
+        for (int i = imin; i <= imax; i++)
+        for (int j = jmin; j <= jmax; j++)
+        for (int k = kmin; k <= kmax; k++)
             lookup_point_region(Point_index( i, j, k), point_indexes);
     }
 

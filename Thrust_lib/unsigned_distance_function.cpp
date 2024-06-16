@@ -58,7 +58,7 @@ void test_local()
     Points points;
 
     objl::Mesh mesh;
-    get_mesh("piston.obj", mesh);
+    get_mesh("../3DObjects/piston.obj", mesh);
     get_points(mesh, points);
 
     int nearest_point1;
