@@ -1032,6 +1032,6 @@ namespace objl
 }
 
 void get_mesh(const std::string& file, objl::Mesh& mesh);
-void get_points(const objl::Mesh& curMesh, Points& points);
+void get_points(const objl::Mesh& curMesh, Points& points, AABB& box);
 void get_faces(const objl::Mesh& curMesh, Faces& faces);
 void test_load_file();

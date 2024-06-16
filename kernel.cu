@@ -189,6 +189,38 @@ double cuda_hash_map_implementation(const Faces& faces, const Points& points, co
 #define _DEVICE_RESET_FAILED_ if (cudaStatus != cudaSuccess) { fprintf(stderr, "\n\ncudaDeviceReset failed!\n\n");return 1;}
 int main()
 {
+    Point target = { 0,1,1.2 };
+    double beta = 2;
+    double map_size = 0.02;
+    // Points points = {Point(0,0,0),Point(0,0,1),Point(0,1,1),Point(0,1,0)};
+    AABB box;
+    objl::Mesh mesh;    get_mesh("3DObjects/cube.obj", mesh);
+    Points points;      get_points(mesh, points, box);
+    Faces faces;        get_faces(mesh, faces);
+
+    int nearest_point = -1; float dist;
+
+    cout << "Num of points : " << points.size() << endl;
+    cout << "Num of faces : " << faces.size() << endl;
+    box.print(); cout << endl << endl;
+
+    cout << "Target point : "; target.print(); 
+    cout << "Beta : " << beta << endl;
+    cout << "Map_size : " << map_size << endl << endl;
+
+    cout << "------------------------------------------------------" << endl;
+    cout << "Unsigned_distance_brute_force => " << endl; nearest_point = -1;
+    dist = unsigned_distance_brute_force(points, target, beta, nearest_point);
+    print_output(dist, nearest_point, target, points);
+
+    cout << "------------------------------------------------------" << endl;
+    cout << "Unsigned_distance_space_map => " << endl; nearest_point = -1;
+    dist = unsigned_distance_space_map2(points, target, beta, map_size, nearest_point);
+    print_output(dist, nearest_point, target, points);
+    cout << endl << endl;
+
+    return 0;
+
     cout << "**************************CUDA_TEST_BEGINS********************************" << endl;
     cout << "**************************CUDA_TEST_BEGINS********************************" << endl << endl;
 
@@ -199,60 +231,30 @@ int main()
     cudaError_t cudaStatus = addWithCuda(c, a, b, arraySize); _DEVICE_RESET_FAILED_
     printf("{1,2,3,4,5} + {10,20,30,40,50} = {%d,%d,%d,%d,%d}\n", c[0], c[1], c[2], c[3], c[4]);
 
-    // cudaDeviceReset must be called before exiting in order for profiling and
-    // tracing tools such as Nsight and Visual Profiler to show complete traces.
+    // cudaDeviceReset must be called before exiting in order for profiling and tracing tools such as Nsight and Visual Profiler to show complete traces.
     cudaStatus = cudaDeviceReset(); _DEVICE_RESET_FAILED_
 
     cout << endl << "**************************CUDA_TEST_SUCCESS********************************" << endl;
     cout << "**************************CUDA_TEST_SUCCESS********************************" << endl << endl;
 
-    Point target = { 0,1,1.2 };
-    double beta = 2;
-    double map_size = 0.02;
-    // Points points = {Point(0,0,0),Point(0,0,1),Point(0,1,1),Point(0,1,0)};
-    
-    objl::Mesh mesh;    get_mesh("3DObjects/cube.obj", mesh);
-    Points points;      get_points(mesh, points);
-    Faces faces;        get_faces(mesh, faces);
-
-    int nearest_point0 = -1;
-    int nearest_point1 = -1;
-    int nearest_point2 = -1;
-    int nearest_point3 = -1;
-    int nearest_point4 = -1;
-
-    cout << "Beta : " << beta << endl;
-    cout << "Map_size : " << map_size << endl << endl;
-    cout << "Target point : "; target.print();
 
     cout << "------------------------------------------------------" << endl;
-    cout << "Unsigned_distance_cuda_hash_table Debug log" << endl;
-    float dist0 = cuda_hash_map_implementation(points, target, map_size, beta);
-    print_output(dist0, nearest_point0, target, points);
+    cout << "Unsigned_distance_cuda_hash_table with Points => " << endl; 
+    dist = cuda_hash_map_implementation(points, target, map_size, beta);
+    print_output(dist, nearest_point, target, points);
     cout << endl << endl;
 
     cout << "------------------------------------------------------" << endl;
-    cout << "Unsigned_distance_cuda_hash_table Debug log" << endl;
-    float dist4 = cuda_hash_map_implementation(faces, points, target, map_size, beta);
-    print_output(dist4, nearest_point4, target, points);
+    cout << "Unsigned_distance_cuda_hash_table with Faces => " << endl;
+    dist = cuda_hash_map_implementation(faces, points, target, map_size, beta);
+    print_output(dist, nearest_point, target, points);
     cout << endl << endl;
 
     cout << "------------------------------------------------------" << endl;
-    cout << "Unsigned_distance_space_map Debug log" << endl;
-    float dist1 = unsigned_distance_space_map_cuda(points, target, beta, map_size, nearest_point1);
-    print_output(dist1, nearest_point1, target, points);
+    cout << "Unsigned_distance_space_map Old" << endl; nearest_point = -1;
+    dist = unsigned_distance_space_map_cuda(points, target, beta, map_size, nearest_point);
+    print_output(dist, nearest_point, target, points);
     cout << endl << endl;
-
-    cout << "------------------------------------------------------" << endl;
-    cout << "Unsigned_distance_space_map Debug log" << endl;
-    float dist2 = unsigned_distance_space_map2(points, target, beta, map_size, nearest_point2);
-    print_output(dist2, nearest_point2, target, points);
-    cout << endl << endl;
-
-    cout << "------------------------------------------------------" << endl;
-    cout << "Unsigned_distance_brute_force output" << endl;
-    float dist3 = unsigned_distance_brute_force(points, target, beta, nearest_point3);
-    print_output(dist3, nearest_point3, target, points);
 
     return 0;
 }
@@ -261,6 +263,8 @@ int main()
 #define _MALLOC_FAILED_ if (cudaStatus != cudaSuccess) {fprintf(stderr, "\n\ncudaMalloc failed!\n\n");goto Error;}
 #define _SYNC_FAILED_ if (cudaStatus != cudaSuccess) {fprintf(stderr, "\n\ncudaDeviceSynchronize returned error code %d after launching addKernel!\n\n");goto Error;}
 #define _KERNAL_FAILED_ if (cudaStatus != cudaSuccess) {    fprintf(stderr, "\n\naddKernel launch failed: %s\n\n", cudaGetErrorString(cudaStatus));    goto Error;}
+
+
 
 // Helper function for using CUDA to add vectors in parallel.
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)

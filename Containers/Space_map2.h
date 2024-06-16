@@ -158,7 +158,7 @@ public:
                 nearest_point = i;
             }
         }
-        return (min_dist > beta2) ? beta2 : min_dist;
+        return _MIN2_(min_dist, beta2);
     }
 
     bool make_empty() {

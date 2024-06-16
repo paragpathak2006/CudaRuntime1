@@ -56,10 +56,10 @@ void test_local()
     double map_size = 0.5;
     // Points points = {Point(0,0,0),Point(0,0,1),Point(0,1,1),Point(0,1,0)};
     Points points;
-
+    AABB box;
     objl::Mesh mesh;
     get_mesh("../3DObjects/piston.obj", mesh);
-    get_points(mesh, points);
+    get_points(mesh, points,box);
 
     int nearest_point1;
     int nearest_point2;

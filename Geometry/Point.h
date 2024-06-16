@@ -78,4 +78,12 @@ public:
 
 };
 
+class AABB {
+public:
+    double xmin, ymin, zmin, xmax, ymax, zmax;
+    AABB() { xmin = 0; ymin = 0; zmin = 0; xmax = 1; ymax = 1; zmax = 1; }
+    AABB(double _xmin, double _ymin, double _zmin, double _xmax, double _ymax, double _zmax) { xmin = _xmin; ymin = _ymin; zmin = _zmin; xmax = _xmax; ymax = _ymax; zmax = _zmax; }
+    void print() const { printf("Bounding Box : Min(%f,%f,%f) , Max(%f,%f,%f)\n", xmin, ymin, zmin, xmax, ymax, zmax); }
+};
+
 typedef vector<Point> Points;

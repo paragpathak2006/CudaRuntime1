@@ -204,12 +204,28 @@ void get_mesh(const std::string& file, objl::Mesh& mesh) {
 	else
 		mesh = Loader.LoadedMeshes[0];
 }
-
-void get_points(const objl::Mesh& curMesh, Points& points) {
+#define _MAX_OF_(A,B) ( A > B ) ? A : B 
+#define _MIN_OF_(A,B) ( A < B ) ? A : B 
+void get_points(const objl::Mesh& curMesh, Points& points, AABB& box) {
 	int length = curMesh.Vertices.size();
+
+	double
+		xmin = curMesh.Vertices[0].Position.X,		xmax = curMesh.Vertices[0].Position.X,
+		ymin = curMesh.Vertices[0].Position.Y,		ymax = curMesh.Vertices[0].Position.Y,
+		zmin = curMesh.Vertices[0].Position.Z,		zmax = curMesh.Vertices[0].Position.Z;
+
 	points.reserve(length);
-	for (int j = 0; j < length; j++)
-		points.emplace_back(curMesh.Vertices[j].Position.X, curMesh.Vertices[j].Position.Y, curMesh.Vertices[j].Position.Z);
+	for (int j = 0; j < length; j++) {
+		points.emplace_back(
+			curMesh.Vertices[j].Position.X, 
+			curMesh.Vertices[j].Position.Y, 
+			curMesh.Vertices[j].Position.Z
+		);
+		xmin = _MIN_OF_(xmin, curMesh.Vertices[j].Position.X);xmax = _MAX_OF_(xmax, curMesh.Vertices[j].Position.X);
+		ymin = _MIN_OF_(ymin, curMesh.Vertices[j].Position.Y);ymax = _MAX_OF_(ymax, curMesh.Vertices[j].Position.Y);
+		zmin = _MIN_OF_(zmin, curMesh.Vertices[j].Position.Z);zmax = _MAX_OF_(zmax, curMesh.Vertices[j].Position.Z);
+	}
+	box = AABB(xmin, ymin, zmin, xmax, ymax, zmax);
 }
 
 void get_faces(const objl::Mesh& curMesh, Faces& faces) {
