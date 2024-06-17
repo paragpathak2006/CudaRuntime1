@@ -265,9 +265,9 @@ int main()
     cout << "Target point : "; target.print();
     cout << "Target point index : "; Point_index(target, map_size).print();
     cout << "Beta : " << beta << endl;
-    cout << "Map_size : " << map_size << endl << endl;
+    cout << "Map size : " << map_size << endl << endl;
 
-    cout << "---------------------Pointwise---------------------------" << endl;
+    cout << "---------------------Pointwise-----------------" << endl;
     cout << "Unsigned distance for Points (brute force) => " << endl; nearest_point = -1;
     dist = unsigned_distance_brute_force(points, target, beta, nearest_point); cout << endl;
     print_output(dist, nearest_point, target, points);
@@ -278,17 +278,17 @@ int main()
     print_output(dist, nearest_face, target, points, faces);
 
     cout << "---------------------Pointwise---------------------------" << endl;
-    cout << "Unsigned_distance for Points (space map) => " << endl; nearest_point = -1;
+    cout << "Unsigned distance for Points (space map) => " << endl; nearest_point = -1;
     dist = unsigned_distance_space_map2(points, target, beta, map_size, nearest_point); cout << endl;
     print_output(dist, nearest_point, target, points);
 
-    cout << "---------------------Pointwise---------------------------" << endl;
-    cout << "Unsigned_distance for Points (Serial cuda) => " << endl; nearest_point = -1;
+    cout << "---------------------Pointwise-----------------" << endl;
+    cout << "Unsigned distance for Points (Serial cuda) => " << endl; nearest_point = -1;
     dist = serial_hash_map_implementation(points, target, map_size, beta); cout << endl;
     print_output(dist, nearest_point, target, points);
 
-    cout << "---------------------Pointwise---------------------------" << endl;
-    cout << "Unsigned_distance for Faces (Serial cuda) => " << endl; nearest_point = -1;
+    cout << "-----------------------Facewise---------------------------" << endl;
+    cout << "Unsigned distance for Faces (Serial cuda) => " << endl; nearest_point = -1;
     dist = serial_hash_map_implementation(faces, points, target, map_size, beta); cout << endl;
     print_output(dist, nearest_face, target, points, faces);
 
