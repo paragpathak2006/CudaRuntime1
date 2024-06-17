@@ -1,4 +1,8 @@
-﻿
+﻿// %% cuda
+// # prompt: write any cuda program using c++
+// !pip install nvcc4jupyter
+// %load_ext nvcc4jupyter
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
@@ -17,14 +21,21 @@
 #include <thrust/functional.h>
 #include <thrust/reduce.h>
 
-#include "Geometry/Point.h"
+//#include "/content/Containers/Space_map2.h"
+//#include "/content/Input_output/Loader.h"
+//#include "/content/Geometry/Point.h"
+//#include "/content/Thrust_lib/thrust_dist.h"
+//#include "/content/Thrust_lib/unsigned_distance_function.h"
+//#include "/content/Input_output/Loader.cpp"
+//#include "/content/Thrust_lib/unsigned_distance_function.cpp"
+
 #include "Containers/Space_map2.h"
 #include "Input_output/Loader.h"
 #include "Geometry/Point.h"
 #include "Thrust_lib/thrust_dist.h"
 #include "Thrust_lib/unsigned_distance_function.h"
 
-cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
+cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int size);
 
 __device__ __host__
 double get_nearest_point_dist(const Point& P0, const Point& P1, const Point& P2, const Point& target);
@@ -34,8 +45,8 @@ double Face::dist(const Point& target, const Point* points) const {
     return get_nearest_point_dist(points[v[0]], points[v[1]], points[v[2]], target);
 }
 
-__global__ 
-void addKernel(int *c, const int *a, const int *b){
+__global__
+void addKernel(int* c, const int* a, const int* b) {
     int i = threadIdx.x;
     c[i] = a[i] + b[i];
 }
@@ -56,6 +67,10 @@ void get_dim(const Point& target, const double& map_size, const double& beta, in
     i0 = target_index.x - dim / 2;
     j0 = target_index.y - dim / 2;
     k0 = target_index.z - dim / 2;
+
+    cout << endl << "DIMs : " << endl << "max_size_index : " << max_size_index << " , Threads_dim : " << threads_dim << " , blocks_dim : " << blocks_dim << " , Dim : " << dim;
+    cout << endl << "(i0,  j0, k0) : ( " << i0 << " , " << j0 << " , " << k0 << " )";
+    cout << endl << "(i1,  j1, k1) : ( " << i0 + dim << " , " << j0 + dim << " , " << k0 + dim << " )" << endl;
 }
 
 
@@ -72,6 +87,8 @@ void calculate_min_dist(
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     int k = threadIdx.z + blockIdx.z * blockDim.z;
 
+    // Print thread and block indices
+   //if(k==0 && j == 0) printf("i : %d , j : %d , k : %d\n",i,j,k);
     if (i >= dim || j >= dim || k >= dim)
         return;
 
@@ -81,15 +98,21 @@ void calculate_min_dist(
 
     int first = buckets[bucket_index].first;
     int count = buckets[bucket_index].count;
+
+    //if(k==0 && j == 0) printf("bucket_index : %d ,bucket_count : %d, first : %d , count : %d\n",bucket_index,bucket_count,first,count);
+
     double min_distance = beta2, dist;
 
-    for (size_t iter = first; iter < count; iter++)
+    for (size_t iter = first; iter < first + count; iter++)
     {
+        if (count == 0) break;
+        //printf("count : %d, i : %d , j : %d , k : %d\n", count, i, j, k);
         const Point_index& p = indexes[iter];
-        if (p.x == i && p.y == j && p.z == k)
+        if (p.x == (i0 + i) && p.y == (j0 + j) && p.z == (k0 + k)) {
             dist = _DISTANCE_(points[p.index], target);
-
-        min_distance = _MINIMUM_(min_distance, dist);
+            min_distance = _MINIMUM_(min_distance, dist);
+            //printf("dist %f : %d,%d,%d\n", dist, i + i0, j + j0, k + k0);
+        }
     }
     min_distances[_LINEAR_INDEX_(i, j, k, dim)] = min_distance;
 }
@@ -115,13 +138,13 @@ void calculate_min_dist(
     int count = buckets[bucket_index].count;
     double min_distance = beta2, dist;
 
-    for (size_t iter = first; iter < count; iter++)
+    for (size_t iter = first; iter < first + count; iter++)
     {
         const Point_index& p = indexes[iter];
-        if (p.x == i && p.y == j && p.z == k)
+        if (p.x == i && p.y == j && p.z == k) {
             dist = faces[p.index].dist(target, points);
-
-        min_distance = _MINIMUM_(min_distance, dist);
+            min_distance = _MINIMUM_(min_distance, dist);
+        }
     }
     min_distances[_LINEAR_INDEX_(i, j, k, dim)] = min_distance;
 }
@@ -132,10 +155,12 @@ void calculate_min_dist(
 #define _CAST_(P) thrust::raw_pointer_cast(P.data())
 #define _RAW_CAST_(P,Q,R,S) _CAST_(P) ,_CAST_(Q) , _CAST_(R) , _CAST_(S)
 #define _RAW_CAST_5_(P,Q,R,S,T) _CAST_(P) ,_CAST_(Q) , _CAST_(R) , _CAST_(S) , _CAST_(T)
-double cuda_hash_map_implementation(const Points& points, const Point& target, double map_size,double beta)
+double cuda_hash_map_implementation(const Points& points, const Point& target, double map_size, double beta)
 {
     Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
     space_map.generate_cuda_hashmap();
+    //return space_map.calculate_min_dist(points, target, beta);
+
     auto bucket_count = space_map.buckets.size();
     auto beta2 = beta * beta;
 
@@ -150,10 +175,13 @@ double cuda_hash_map_implementation(const Points& points, const Point& target, d
     thrust::device_vector<Point>        Dpoints = points;
     thrust::device_vector<double>       min_distances(_CUBE_(dim));
 
-    calculate_min_dist <<<blocks_per_grid, threads_per_block >>> (
+    //cout<<endl<<"--------CUDA kernal begin---------"<<endl<<endl;
+    calculate_min_dist << <blocks_per_grid, threads_per_block >> > (
         _RAW_CAST_(buckets, point_indexes, Dpoints, min_distances),
-          target, beta2, bucket_count, threads_dim * blocks_dim, i0, j0, k0
+        target, beta2, bucket_count, threads_dim * blocks_dim, i0, j0, k0
         );
+
+    //cout<<endl<<"--------CUDA kernal end---------"<<endl<<endl;
 
     return thrust::reduce(_ITER_(min_distances), beta2, min_dist());
 
@@ -166,20 +194,20 @@ double cuda_hash_map_implementation(const Faces& faces, const Points& points, co
     int bucket_count = space_map.buckets.size();
     double beta2 = beta * beta;
 
-    int threads_dim, blocks_dim, dim, i0,j0,k0;
+    int threads_dim, blocks_dim, dim, i0, j0, k0;
     get_dim(target, map_size, beta, threads_dim, blocks_dim, dim, i0, j0, k0);
 
     thrust::device_vector<Bucket>       buckets = space_map.buckets;
     thrust::device_vector<Point_index>  point_indexes = space_map.point_indexes;
     thrust::device_vector<Point>        Dpoints = points;
     thrust::device_vector<Face>         Dfaces = faces;
-    thrust::device_vector<double>       min_distances(_CUBE_(dim));
+    thrust::device_vector<double>       min_distances(_CUBE_(dim), beta2);
 
     dim3 threads_per_block(_DIM3_(threads_dim));
     dim3 blocks_per_grid(_DIM3_(blocks_dim));
     calculate_min_dist << <blocks_per_grid, threads_per_block >> > (
-        _RAW_CAST_5_(buckets, point_indexes,Dfaces, Dpoints, min_distances),
-        target, beta2, bucket_count, threads_dim * blocks_dim,i0, j0, k0
+        _RAW_CAST_5_(buckets, point_indexes, Dfaces, Dpoints, min_distances),
+        target, beta2, bucket_count, threads_dim * blocks_dim, i0, j0, k0
         );
 
     return thrust::reduce(_ITER_(min_distances), beta2, min_dist());
@@ -190,21 +218,28 @@ double cuda_hash_map_implementation(const Faces& faces, const Points& points, co
 int main()
 {
     Point target = { 0,1,1.2 };
-    double beta = 2;
+    double beta = 0.3;
     double map_size = 0.02;
-    // Points points = {Point(0,0,0),Point(0,0,1),Point(0,1,1),Point(0,1,0)};
+    //Points points = { Point(0,0,0),Point(0,0,1),Point(0,1,1),Point(0,1,0) };
     AABB box;
+
     objl::Mesh mesh;    get_mesh("3DObjects/cube.obj", mesh);
-    Points points;      get_points(mesh, points, box);
-    Faces faces;        get_faces(mesh, faces);
+    Points points;      
+    get_points(mesh, points, box);
+    Faces faces;
+    get_faces(mesh, faces);
 
     int nearest_point = -1; float dist;
 
     cout << "Num of points : " << points.size() << endl;
     cout << "Num of faces : " << faces.size() << endl;
-    box.print(); cout << endl << endl;
+    box.print();
+    Point_index(Point(box.xmin, box.ymin, box.zmin), map_size).print();
+    Point_index(Point(box.xmax, box.ymax, box.zmax), map_size).print();
+    cout << endl << endl;
 
-    cout << "Target point : "; target.print(); 
+    cout << "Target point : "; target.print();
+    cout << "Target point index : "; Point_index(target, map_size).print();
     cout << "Beta : " << beta << endl;
     cout << "Map_size : " << map_size << endl << endl;
 
@@ -219,7 +254,6 @@ int main()
     print_output(dist, nearest_point, target, points);
     cout << endl << endl;
 
-    return 0;
 
     cout << "**************************CUDA_TEST_BEGINS********************************" << endl;
     cout << "**************************CUDA_TEST_BEGINS********************************" << endl << endl;
@@ -229,7 +263,7 @@ int main()
 
     // Add vectors in parallel.
     cudaError_t cudaStatus = addWithCuda(c, a, b, arraySize); _DEVICE_RESET_FAILED_
-    printf("{1,2,3,4,5} + {10,20,30,40,50} = {%d,%d,%d,%d,%d}\n", c[0], c[1], c[2], c[3], c[4]);
+        printf("{1,2,3,4,5} + {10,20,30,40,50} = {%d,%d,%d,%d,%d}\n", c[0], c[1], c[2], c[3], c[4]);
 
     // cudaDeviceReset must be called before exiting in order for profiling and tracing tools such as Nsight and Visual Profiler to show complete traces.
     cudaStatus = cudaDeviceReset(); _DEVICE_RESET_FAILED_
@@ -237,22 +271,23 @@ int main()
     cout << endl << "**************************CUDA_TEST_SUCCESS********************************" << endl;
     cout << "**************************CUDA_TEST_SUCCESS********************************" << endl << endl;
 
-
     cout << "------------------------------------------------------" << endl;
-    cout << "Unsigned_distance_cuda_hash_table with Points => " << endl; 
-    dist = cuda_hash_map_implementation(points, target, map_size, beta);
+    cout << "Unsigned_distance_cuda_hash_table with Points => " << endl; nearest_point = -1;
+    dist = cuda_hash_map_implementation(points, target, map_size, beta); cout << endl;
     print_output(dist, nearest_point, target, points);
     cout << endl << endl;
 
+    return 0;
+
     cout << "------------------------------------------------------" << endl;
-    cout << "Unsigned_distance_cuda_hash_table with Faces => " << endl;
-    dist = cuda_hash_map_implementation(faces, points, target, map_size, beta);
+    cout << "Unsigned_distance_cuda_hash_table with Faces => " << endl; nearest_point = -1;
+    dist = cuda_hash_map_implementation(faces, points, target, map_size, beta); cout << endl;
     print_output(dist, nearest_point, target, points);
     cout << endl << endl;
 
     cout << "------------------------------------------------------" << endl;
     cout << "Unsigned_distance_space_map Old" << endl; nearest_point = -1;
-    dist = unsigned_distance_space_map_cuda(points, target, beta, map_size, nearest_point);
+    dist = unsigned_distance_space_map_cuda(points, target, beta, map_size, nearest_point); cout << endl;
     print_output(dist, nearest_point, target, points);
     cout << endl << endl;
 
@@ -267,42 +302,42 @@ int main()
 
 
 // Helper function for using CUDA to add vectors in parallel.
-cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
+cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int size)
 {
-    int *dev_a = 0;
-    int *dev_b = 0;
-    int *dev_c = 0;
+    int* dev_a = 0;
+    int* dev_b = 0;
+    int* dev_c = 0;
     cudaError_t cudaStatus;
 
     // Choose which GPU to run on, change this on a multi-GPU system.
     cudaStatus = cudaSetDevice(0); _SETUP_FAILED_
 
-    // Allocate GPU buffers for three vectors (two input, one output)    .
-    cudaStatus = cudaMalloc((void**)&dev_c, size * sizeof(int)); _MALLOC_FAILED_
-    cudaStatus = cudaMalloc((void**)&dev_a, size * sizeof(int)); _MALLOC_FAILED_
-    cudaStatus = cudaMalloc((void**)&dev_b, size * sizeof(int)); _MALLOC_FAILED_
+        // Allocate GPU buffers for three vectors (two input, one output)    .
+        cudaStatus = cudaMalloc((void**)&dev_c, size * sizeof(int)); _MALLOC_FAILED_
+        cudaStatus = cudaMalloc((void**)&dev_a, size * sizeof(int)); _MALLOC_FAILED_
+        cudaStatus = cudaMalloc((void**)&dev_b, size * sizeof(int)); _MALLOC_FAILED_
 
-    // Copy input vectors from host memory to GPU buffers.
-    cudaStatus = cudaMemcpy(dev_a, a, size * sizeof(int), cudaMemcpyHostToDevice); _MALLOC_FAILED_
-    cudaStatus = cudaMemcpy(dev_b, b, size * sizeof(int), cudaMemcpyHostToDevice); _MALLOC_FAILED_
+        // Copy input vectors from host memory to GPU buffers.
+        cudaStatus = cudaMemcpy(dev_a, a, size * sizeof(int), cudaMemcpyHostToDevice); _MALLOC_FAILED_
+        cudaStatus = cudaMemcpy(dev_b, b, size * sizeof(int), cudaMemcpyHostToDevice); _MALLOC_FAILED_
 
-    // Launch a kernel on the GPU with one thread for each element.
-    addKernel<<<1, size>>>(dev_c, dev_a, dev_b);
+        // Launch a kernel on the GPU with one thread for each element.
+        addKernel << <1, size >> > (dev_c, dev_a, dev_b);
 
     // Check for any errors launching the kernel
     cudaStatus = cudaGetLastError(); _KERNAL_FAILED_
-    
-    // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
-    cudaStatus = cudaDeviceSynchronize(); _SYNC_FAILED_
 
-    // Copy output vector from GPU buffer to host memory.
-    cudaStatus = cudaMemcpy(c, dev_c, size * sizeof(int), cudaMemcpyDeviceToHost); _MALLOC_FAILED_
+        // cudaDeviceSynchronize waits for the kernel to finish, and returns any errors encountered during the launch.
+        cudaStatus = cudaDeviceSynchronize(); _SYNC_FAILED_
 
-Error:
+        // Copy output vector from GPU buffer to host memory.
+        cudaStatus = cudaMemcpy(c, dev_c, size * sizeof(int), cudaMemcpyDeviceToHost); _MALLOC_FAILED_
+
+        Error :
     cudaFree(dev_c);
     cudaFree(dev_a);
     cudaFree(dev_b);
-    
+
     return cudaStatus;
 }
 

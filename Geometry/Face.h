@@ -3,6 +3,12 @@
 #include "../Thrust_lib/unsigned_distance_function.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+
+#define _MAX2_(A,B) ((A > B) ? A : B) 
+#define _MIN2_(A,B) ((A < B) ? A : B) 
+#define _MAX3_(A,B,C) (A > B) ? _MAX2_(A,C) : _MAX2_(B,C)
+#define _MIN3_(A,B,C) (A < B) ? _MIN2_(A,C) : _MIN2_(B,C)
+
 class Face
 {
 public:
@@ -13,6 +19,20 @@ public:
 
 	__device__ __host__
 		double dist(const Point& target, const Point* points) const;
+
+		AABB get_box(const Points& points) const {
+			AABB box;
+			const Point& p0 = points[v[0]];
+			const Point& p1 = points[v[1]];
+			const Point& p2 = points[v[2]];
+			return AABB(
+				_MIN3_(p0.x, p1.x, p2.x), _MAX3_(p0.x, p1.x, p2.x),
+				_MIN3_(p0.y, p1.y, p2.y), _MAX3_(p0.y, p1.y, p2.y),
+				_MIN3_(p0.z, p1.z, p2.z), _MAX3_(p0.z, p1.z, p2.z)
+			);
+		}
+
+		
 };
 
 typedef vector<Face> Faces;

@@ -55,10 +55,7 @@ typedef vector<Point_index> Point_indexes;
 
 #define FOR_RANGE(it,range) for(auto& it = range.first; it != range.second; ++it)
 #define FOR_ITER(local_it,point_map) for (auto local_it = point_map.begin(i); local_it != point_map.end(i); ++local_it)
-#define _MAX2_(A,B) ((A > B) ? A : B) 
-#define _MIN2_(A,B) ((A < B) ? A : B) 
-#define _MAX3_(A,B,C) (A > B) ? _MAX2_(A,C) : _MAX2_(B,C)
-#define _MIN3_(A,B,C) (A < B) ? _MIN2_(A,C) : _MIN2_(B,C)
+
 class Space_map2
 {
     double map_size;
@@ -76,24 +73,24 @@ public:
             point_map.emplace(Point_index(points[i], i, map_size), i);
     }
 
-
     Space_map2(const Faces faces, const Points& points, const double& mapsize) {
-        int num_faces = points.size();
+        int num_faces = points.size(), xmin, ymin, zmin, xmax, ymax, zmax;
         map_size = mapsize;
         point_map.reserve(num_faces * 5);
 
         for (size_t iFace = 0; iFace < num_faces; iFace++) {
-            Point_index p0 = Point_index(points[faces[iFace].v[0]], iFace, map_size);
-            Point_index p1 = Point_index(points[faces[iFace].v[1]], iFace, map_size);
-            Point_index p2 = Point_index(points[faces[iFace].v[2]], iFace, map_size);
+                
+            Point_index p0(points[faces[iFace].v[0]], map_size);
+            Point_index p1(points[faces[iFace].v[1]], map_size);
+            Point_index p2(points[faces[iFace].v[2]], map_size);
 
-            int px_min = _MIN3_(p0.x, p1.x, p2.x);            int px_max = _MAX3_(p0.x, p1.x, p2.x);
-            int py_min = _MIN3_(p0.y, p1.y, p2.y);            int py_max = _MAX3_(p0.y, p1.y, p2.y);
-            int pz_min = _MIN3_(p0.z, p1.z, p2.z);            int pz_max = _MAX3_(p0.z, p1.z, p2.z);
+            xmin = _MIN3_(p0.x, p1.x, p2.x);            xmax = _MAX3_(p0.x, p1.x, p2.x);
+            ymin = _MIN3_(p0.y, p1.y, p2.y);            ymax = _MAX3_(p0.y, p1.y, p2.y);
+            zmin = _MIN3_(p0.z, p1.z, p2.z);            zmax = _MAX3_(p0.z, p1.z, p2.z);
 
-            for (int i = px_min; i <= px_max; i++)
-            for (int j = py_min; j <= py_max; j++)
-            for (int k = pz_min; k <= pz_max; k++)
+            for (int i = xmin; i <= xmax; i++)
+            for (int j = ymin; j <= ymax; j++)
+            for (int k = zmin; k <= zmax; k++)
                 point_map.emplace(Point_index(i,j,k, iFace), iFace);
 
         }
@@ -165,6 +162,79 @@ public:
         return point_map.empty();
     }
 
+#define _CALC_BLOCK_DIM_(n,t) (n+t-1)/t
+#define _MAP_INDEX_(x,y) round(x/y)
+    void get_dim(const Point& target, const double& map_size, const double& beta, int& threads_dim, int& blocks_dim, int& dim, int& i0, int& j0, int& k0) {
+        Point_index target_index(target, map_size);
+        int max_size_index = _MAP_INDEX_(beta, map_size) + 1;
+
+        max_size_index = max_size_index + max_size_index % 2;
+        int num_threads = 2 * max_size_index;
+
+        threads_dim = 4;
+        blocks_dim = _CALC_BLOCK_DIM_(num_threads, threads_dim);
+        dim = threads_dim * blocks_dim;
+
+        i0 = target_index.x - dim / 2;
+        j0 = target_index.y - dim / 2;
+        k0 = target_index.z - dim / 2;
+
+        cout << endl << "DIMs : " << endl << "max_size_index : " << max_size_index << " , Threads_dim : " << threads_dim << " , blocks_dim : " << blocks_dim << " , Dim : " << dim;
+        cout << endl << "(i0,  j0, k0) : ( " << i0 << " , " << j0 << " , " << k0 << " )";
+        cout << endl << "(i1,  j1, k1) : ( " << i0 + dim << " , " << j0 + dim << " , " << k0 + dim << " )" << endl;
+    }
+
+#define _MINIMUM_(A,B) A < B ? A : B
+#define _LINEAR_INDEX_(i,j,k,dim) i + j * dim + k * dim * dim
+
+    double calculate_min_dist(const Points& points,const Point& target, const double& beta)
+    {
+        int threads_dim, blocks_dim, dim, i0, j0,  k0;
+        get_dim(target, map_size, beta, threads_dim, blocks_dim, dim, i0, j0, k0);
+        auto beta2 = beta * beta;
+        auto bucket_count = point_map.bucket_count();
+        vector<double> min_distances(dim*dim*dim);
+
+        for (int i = 0; i < dim; i++)
+            for (int j = 0; j < dim; j++)
+                for (int k = 0; k < dim; k++) 
+                {
+
+                    // Print thread and block indices
+                   //if(k==0 && j == 0) printf("i : %d , j : %d , k : %d\n",i,j,k);
+                    //if (i >= dim || j >= dim || k >= dim)
+                    //    return;
+
+                    min_distances[_LINEAR_INDEX_(i, j, k, dim)] = beta2;
+
+                    int bucket_index = _HASH_(i0 + i, j0 + j, k0 + k) % bucket_count;
+
+                    int first = buckets[bucket_index].first;
+                    int count = buckets[bucket_index].count;
+                    double min_distance = beta2, dist;
+                    //if(k==0 && j == 0) printf("bucket_index : %d ,bucket_count : %d, first : %d , count : %d\n",bucket_index,bucket_count,first,count);
+
+                    for (size_t iter = first; iter < first + count; iter++)
+                    {
+                        if (count == 0) break;
+                        //printf("count : %d, i : %d , j : %d , k : %d\n", count, i, j, k);
+                        const Point_index& p = point_indexes[iter];
+                        if (p.x == (i0 + i) && p.y == (j0 + j) && p.z == (k0 + k)) {
+                            dist = _DISTANCE_(points[p.index], target);
+                            min_distance = _MINIMUM_(min_distance, dist);
+                            //printf("dist %f : %d,%d,%d\n", dist, i + i0, j + j0, k + k0);
+                        }
+
+                    }
+                    min_distances[_LINEAR_INDEX_(i, j, k, dim)] = min_distance;
+                }
+        auto min_dist_var = min_distances[0];
+        for(auto dist: min_distances) 
+            min_dist_var = _MINIMUM_(min_dist_var, dist);
+
+        return min_dist_var;
+
+    }
 
     //double search_space_map_parallel(const Points& points, const Point& target, const double& beta, int& nearest_point) {
     //    vector<int> point_indexes;
