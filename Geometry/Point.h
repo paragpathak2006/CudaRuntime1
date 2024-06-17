@@ -32,7 +32,7 @@ public:
         );
     }
 
-    void print() const { cout << "(" << x << "," << y << "," << z << ")" <<endl; }
+    void print() const { cout << "Point(" << x << "," << y << "," << z << ")" <<endl; }
 
     __host__ __device__
         size_t get_hash(const double& map_size) const {
@@ -71,6 +71,9 @@ public:
         return (x - p.x) * (x - p.x) + (y - p.y) * (y - p.y) + (z - p.z) * (z - p.z);
     };
 
+    __device__ __host__
+        double dist(const Point& p0, const Point& p1, const Point& p2) const;
+
     Point unity() {
         double d = sqrt(x * x + y * y + z * z);
         return Point(x / d, y / d, z / d);
@@ -87,3 +90,6 @@ public:
 };
 
 typedef vector<Point> Points;
+
+__device__ __host__
+double get_nearest_point_dist(const Point& P0, const Point& P1, const Point& P2, const Point& target);

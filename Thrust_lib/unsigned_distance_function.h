@@ -3,12 +3,18 @@
 //
 #pragma once
 #include "../Geometry/Point.h"
+#include "../Geometry/Face.h"
 
 float unsigned_distance_brute_force(const Points& points, const Point& target, double beta, int& nearest_point);
 double unsigned_distance_space_map2(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
 double unsigned_distance_space_map_cuda(const Points& points, const Point& target, double beta, double map_size, int& nearest_point);
 
+
+double unsigned_distance_brute_force(const Faces& faces, 
+	const Points& points, const Point& target, double beta, int& nearest_point);
+
 void print_output(float dist, int nearest_point, const Point& target, const Points& points);
+void print_output(float dist, int nearest_point, const Point& target, const Points& points, const Faces& faces);
 void test_local();
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

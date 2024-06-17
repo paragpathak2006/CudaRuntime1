@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include "../Geometry/Point.h"
+#include "../Geometry/Face.h"
 #include "../Containers/Space_map2.h"
 #include "../Input_output/Loader.h"
 #include "unsigned_distance_function.h"
@@ -28,6 +29,23 @@ float unsigned_distance_brute_force(const Points& points, const Point& target, d
     return (min_dist > beta2) ? beta2 : min_dist;
 }
 
+double unsigned_distance_brute_force(const Faces& faces, const Points& points, const Point& target, double beta, int& nearest_face) {
+    nearest_face = -1;
+    float min_dist = target.dist(points[0]);
+    int i = 0;
+    double beta2 = beta * beta;
+    for (const Face& face : faces)
+    {
+        float dist = face.dist(target, points);
+        if (dist < min_dist)
+        {
+            min_dist = dist;
+            nearest_face = i;
+        }
+        i++;
+    } 
+    return __min(min_dist, beta2);
+}
 double unsigned_distance_space_map2(const Points& points, const Point& target, double beta, double map_size, int& nearest_point) {
 
     nearest_point = -1;
@@ -40,10 +58,14 @@ double unsigned_distance_space_map2(const Points& points, const Point& target, d
 void print_output(float dist, int nearest_point, const Point& target, const Points& points) {
     cout << "Unsigned distance : " << sqrt(dist) << endl;
     cout << "Target point : "; target.print();
-    cout << "Nearest point : ";
-    if (nearest_point >= 0) points[nearest_point].print();
-    else cout << "Point not found!" << endl;
+    if (nearest_point >= 0) {cout << "Nearest point : ";points[nearest_point].print();}
+    cout << endl << endl;
+}
 
+void print_output(float dist, int nearest_face, const Point& target, const Points& points, const Faces& faces) {
+    cout << "Unsigned distance : " << sqrt(dist) << endl;
+    cout << "Target point : "; target.print();
+    if (nearest_face >= 0) { cout << "Nearest Face : "; faces[nearest_face].print(); }
     cout << endl << endl;
 }
 

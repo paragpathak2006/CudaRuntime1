@@ -1,12 +1,13 @@
 #pragma once
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 #include <tuple>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
+
 #include "../Geometry/Point.h"
 #include "../Geometry/Face.h"
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
 
 class Point_index
 {
@@ -32,8 +33,8 @@ public:
 
     Point_index() { x = 0; y = 0; z = 0; index = -1e5; }
     bool operator==(const Point_index& rhs) const { return x == rhs.x && y == rhs.y && z == rhs.z; }
-    void print() const { cout << "(" << x << "," << y << "," << z << ")" << endl; }
-    void print2() const { cout << "(" << x << "," << y << "," << z << ")"; }
+    void print() const { cout << "Point_index(" << x << "," << y << "," << z << ")" << endl; }
+    void print2() const { cout << "Point_index(" << x << "," << y << "," << z << ")"; }
     size_t get_hash() const {return _HASH_(x, y, z);}
 };
 

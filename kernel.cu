@@ -29,20 +29,31 @@
 //#include "/content/Input_output/Loader.cpp"
 //#include "/content/Thrust_lib/unsigned_distance_function.cpp"
 
+#include "Geometry/Point.h"
+#include "Geometry/Face.h"
 #include "Containers/Space_map2.h"
 #include "Input_output/Loader.h"
-#include "Geometry/Point.h"
 #include "Thrust_lib/thrust_dist.h"
 #include "Thrust_lib/unsigned_distance_function.h"
 
 cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int size);
 
-__device__ __host__
-double get_nearest_point_dist(const Point& P0, const Point& P1, const Point& P2, const Point& target);
+//__device__ __host__
+//double get_nearest_point_dist(const Point& P0, const Point& P1, const Point& P2, const Point& target);
 
 __device__ __host__
 double Face::dist(const Point& target, const Point* points) const {
     return get_nearest_point_dist(points[v[0]], points[v[1]], points[v[2]], target);
+}
+
+__device__ __host__
+double Face::dist(const Point& target, const Points& points) const {
+    return get_nearest_point_dist(points[v[0]], points[v[1]], points[v[2]], target);
+}
+
+__device__ __host__
+double Point::dist(const Point& p0, const Point& p1, const Point& p2) const {
+    return get_nearest_point_dist(p0, p1, p2, *this);
 }
 
 __global__
@@ -155,6 +166,13 @@ void calculate_min_dist(
 #define _CAST_(P) thrust::raw_pointer_cast(P.data())
 #define _RAW_CAST_(P,Q,R,S) _CAST_(P) ,_CAST_(Q) , _CAST_(R) , _CAST_(S)
 #define _RAW_CAST_5_(P,Q,R,S,T) _CAST_(P) ,_CAST_(Q) , _CAST_(R) , _CAST_(S) , _CAST_(T)
+double serial_hash_map_implementation(const Points& points, const Point& target, double map_size, double beta)
+{
+    Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
+    space_map.generate_cuda_hashmap();
+    return space_map.calculate_min_dist(points, target, beta);
+}
+
 double cuda_hash_map_implementation(const Points& points, const Point& target, double map_size, double beta)
 {
     Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
@@ -220,20 +238,20 @@ int main()
     Point target = { 0,1,1.2 };
     double beta = 0.3;
     double map_size = 0.02;
-    //Points points = { Point(0,0,0),Point(0,0,1),Point(0,1,1),Point(0,1,0) };
+//    Points points = { Point(0,0,0),Point(0,0,1),Point(0,1,1),Point(0,1,0) };
+//    Faces faces = { Face(0,1,3),Face(2,3,1) };
     AABB box;
 
     objl::Mesh mesh;    get_mesh("3DObjects/cube.obj", mesh);
-    Points points;      
-    get_points(mesh, points, box);
-    Faces faces;
-    get_faces(mesh, faces);
+    Points points;      get_points(mesh, points, box);
+    Faces faces;        get_faces(mesh, faces);
 
-    int nearest_point = -1; float dist;
+    int nearest_point = -1; int nearest_face = -1; float dist;
 
     cout << "Num of points : " << points.size() << endl;
     cout << "Num of faces : " << faces.size() << endl;
     box.print();
+
     Point_index(Point(box.xmin, box.ymin, box.zmin), map_size).print();
     Point_index(Point(box.xmax, box.ymax, box.zmax), map_size).print();
     cout << endl << endl;
@@ -243,18 +261,27 @@ int main()
     cout << "Beta : " << beta << endl;
     cout << "Map_size : " << map_size << endl << endl;
 
-    cout << "------------------------------------------------------" << endl;
-    cout << "Unsigned_distance_brute_force => " << endl; nearest_point = -1;
-    dist = unsigned_distance_brute_force(points, target, beta, nearest_point);
+    cout << "---------------------Pointwise---------------------------" << endl;
+    cout << "Unsigned distance for Points (brute force) => " << endl; nearest_point = -1;
+    dist = unsigned_distance_brute_force(points, target, beta, nearest_point); cout << endl;
     print_output(dist, nearest_point, target, points);
 
-    cout << "------------------------------------------------------" << endl;
-    cout << "Unsigned_distance_space_map => " << endl; nearest_point = -1;
-    dist = unsigned_distance_space_map2(points, target, beta, map_size, nearest_point);
+    cout << "-----------------------Facewise---------------------------" << endl;
+    cout << "Unsigned distance for Faces (brute force) => " << endl; nearest_face = -1;
+    dist = unsigned_distance_brute_force(faces, points, target, beta, nearest_face); cout << endl;
+    print_output(dist, nearest_face, target, points, faces);
+
+    cout << "---------------------Pointwise---------------------------" << endl;
+    cout << "Unsigned_distance for Points (space map) => " << endl; nearest_point = -1;
+    dist = unsigned_distance_space_map2(points, target, beta, map_size, nearest_point); cout << endl;
     print_output(dist, nearest_point, target, points);
+
+    cout << "---------------------Pointwise---------------------------" << endl;
+    cout << "Unsigned_distance for Points (Serial cuda) => " << endl; nearest_point = -1;
+    dist = serial_hash_map_implementation(points, target, map_size, beta); cout << endl;
+    print_output(dist, nearest_point, target, points);
+
     cout << endl << endl;
-
-
     cout << "**************************CUDA_TEST_BEGINS********************************" << endl;
     cout << "**************************CUDA_TEST_BEGINS********************************" << endl << endl;
 
@@ -267,11 +294,11 @@ int main()
 
     // cudaDeviceReset must be called before exiting in order for profiling and tracing tools such as Nsight and Visual Profiler to show complete traces.
     cudaStatus = cudaDeviceReset(); _DEVICE_RESET_FAILED_
-
-    cout << endl << "**************************CUDA_TEST_SUCCESS********************************" << endl;
+    cout << endl;
+    cout << "**************************CUDA_TEST_SUCCESS********************************" << endl;
     cout << "**************************CUDA_TEST_SUCCESS********************************" << endl << endl;
 
-    cout << "------------------------------------------------------" << endl;
+    cout << "---------------------Pointwise---------------------------" << endl;
     cout << "Unsigned_distance_cuda_hash_table with Points => " << endl; nearest_point = -1;
     dist = cuda_hash_map_implementation(points, target, map_size, beta); cout << endl;
     print_output(dist, nearest_point, target, points);
@@ -279,13 +306,13 @@ int main()
 
     return 0;
 
-    cout << "------------------------------------------------------" << endl;
+    cout << "---------------------Pointwise---------------------------" << endl;
     cout << "Unsigned_distance_cuda_hash_table with Faces => " << endl; nearest_point = -1;
     dist = cuda_hash_map_implementation(faces, points, target, map_size, beta); cout << endl;
     print_output(dist, nearest_point, target, points);
     cout << endl << endl;
 
-    cout << "------------------------------------------------------" << endl;
+    cout << "---------------------Pointwise---------------------------" << endl;
     cout << "Unsigned_distance_space_map Old" << endl; nearest_point = -1;
     dist = unsigned_distance_space_map_cuda(points, target, beta, map_size, nearest_point); cout << endl;
     print_output(dist, nearest_point, target, points);
