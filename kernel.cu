@@ -36,10 +36,16 @@
 #include "Thrust_lib/thrust_dist.h"
 #include "Thrust_lib/unsigned_distance_function.h"
 
-cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int size);
+#define _DEVICE_RESET_FAILED_ if (cudaStatus != cudaSuccess) { fprintf(stderr, "\n\ncudaDeviceReset failed!\n\n");return 1;}
 
-//__device__ __host__
-//double get_nearest_point_dist(const Point& P0, const Point& P1, const Point& P2, const Point& target);
+#define _SETUP_FAILED_ if (cudaStatus != cudaSuccess) {fprintf(stderr, "\n\ncudaSetDevice failed!  \n\nDo you have a CUDA-capable GPU installed?\n\n");goto Error;}
+#define _MALLOC_FAILED_ if (cudaStatus != cudaSuccess) {fprintf(stderr, "\n\ncudaMalloc failed!\n\n");goto Error;}
+#define _SYNC_FAILED_ if (cudaStatus != cudaSuccess) {fprintf(stderr, "\n\ncudaDeviceSynchronize returned error code %d after launching addKernel!\n\n");goto Error;}
+#define _KERNAL_FAILED_ if (cudaStatus != cudaSuccess) {    fprintf(stderr, "\n\naddKernel launch failed: %s\n\n", cudaGetErrorString(cudaStatus));    goto Error;}
+
+cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int size);
+inline void cuda_begin_subroutine(cudaEvent_t& start, cudaEvent_t& stop);
+inline int cuda_end_subroutine(cudaEvent_t& start, cudaEvent_t& stop);
 
 __device__ __host__
 double Face::dist(const Point& target, const Point* points) const {
@@ -87,6 +93,7 @@ void get_dim(const Point& target, const double& map_size, const double& beta, in
 
 #define _MINIMUM_(A,B) A < B ? A : B
 #define _LINEAR_INDEX_(i,j,k,dim) i + j * dim + k * dim * dim
+
 
 __global__
 void calculate_min_dist(
@@ -169,14 +176,14 @@ void calculate_min_dist(
 double serial_hash_map_implementation(const Points& points, const Point& target, double map_size, double beta)
 {
     Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
-    space_map.generate_cuda_hashmap();
+    space_map.get_cuda_hashmap();
     return space_map.serial_calculate_min_dist(points, target, beta);
 }
 
 double cuda_hash_map_implementation(const Points& points, const Point& target, double map_size, double beta)
 {
     Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
-    space_map.generate_cuda_hashmap();
+    space_map.get_cuda_hashmap();
     //return space_map.calculate_min_dist(points, target, beta);
 
     auto bucket_count = space_map.buckets.size();
@@ -193,28 +200,35 @@ double cuda_hash_map_implementation(const Points& points, const Point& target, d
     thrust::device_vector<Point>        Dpoints = points;
     thrust::device_vector<double>       min_distances(_CUBE_(dim));
 
+
+    // Create CUDA events for timing
+    cudaEvent_t start, stop;
+    cuda_begin_subroutine(start, stop);
+
     //cout<<endl<<"--------CUDA kernal begin---------"<<endl<<endl;
     calculate_min_dist << <blocks_per_grid, threads_per_block >> > (
         _RAW_CAST_(buckets, point_indexes, Dpoints, min_distances),
         target, beta2, bucket_count, threads_dim * blocks_dim, i0, j0, k0
         );
 
+    auto dist  = thrust::reduce(_ITER_(min_distances), beta2, min_dist());
+
     //cout<<endl<<"--------CUDA kernal end---------"<<endl<<endl;
 
-    return thrust::reduce(_ITER_(min_distances), beta2, min_dist());
-
+    cuda_end_subroutine(start, stop);
+    return dist;
 }
 double serial_hash_map_implementation(const Faces& faces, const Points& points, const Point& target, double map_size, double beta)
 {
     Space_map2 space_map(/* with input Faces as */faces,/* with input points as */ points, /* map_size as */ map_size);
-    space_map.generate_cuda_hashmap();
+    space_map.get_cuda_hashmap();
     return space_map.serial_calculate_min_dist(faces, points, target, beta);
 }
 
 double cuda_hash_map_implementation(const Faces& faces, const Points& points, const Point& target, double map_size, double beta)
 {
     Space_map2 space_map(/* with input Faces as */faces,/* with input points as */ points, /* map_size as */ map_size);
-    space_map.generate_cuda_hashmap();
+    space_map.get_cuda_hashmap();
     int bucket_count = space_map.buckets.size();
     double beta2 = beta * beta;
 
@@ -229,34 +243,82 @@ double cuda_hash_map_implementation(const Faces& faces, const Points& points, co
 
     dim3 threads_per_block(_DIM3_(threads_dim));
     dim3 blocks_per_grid(_DIM3_(blocks_dim));
+
+    // Create CUDA events for timing
+    cudaEvent_t start, stop;
+    cuda_begin_subroutine(start, stop);
+
+    //cout<<endl<<"--------CUDA kernal begin---------"<<endl<<endl;
     calculate_min_dist << <blocks_per_grid, threads_per_block >> > (
         _RAW_CAST_5_(buckets, point_indexes, Dfaces, Dpoints, min_distances),
-        target, beta2, bucket_count, threads_dim * blocks_dim, i0, j0, k0
-        );
+        target, beta2, bucket_count, threads_dim * blocks_dim, i0, j0, k0);
 
-    return thrust::reduce(_ITER_(min_distances), beta2, min_dist());
+    auto dist = thrust::reduce(_ITER_(min_distances), beta2, min_dist());
+
+    //cout<<endl<<"--------CUDA kernal end---------"<<endl<<endl;
+
+    cuda_end_subroutine(start, stop);
+    return dist;
 
 }
 
-#define _DEVICE_RESET_FAILED_ if (cudaStatus != cudaSuccess) { fprintf(stderr, "\n\ncudaDeviceReset failed!\n\n");return 1;}
+inline void cuda_begin_subroutine(cudaEvent_t &start, cudaEvent_t& stop)
+{
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    // Record start event
+    cudaEventRecord(start, 0);
+}
+
+inline int cuda_end_subroutine(cudaEvent_t& start, cudaEvent_t& stop)
+{
+    // Wait for the kernel to complete
+    cudaDeviceSynchronize();
+
+    // Record stop event
+    cudaEventRecord(stop, 0);
+
+    // Calculate the elapsed time
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    std::cout << "Kernel execution time: " << milliseconds << " ms" << std::endl;
+
+    // cudaDeviceReset must be called before exiting in order for profiling and tracing tools such as Nsight and Visual Profiler to show complete traces.
+    auto cudaStatus = cudaDeviceReset(); _DEVICE_RESET_FAILED_
+
+    return 0;
+}
+
+int run_cuda_test(const AABB& box, const Faces& faces, const Points& points, const Point& target, const double& map_size, const double& beta); 
+
 int main()
 {
-    Point target = { 0,1,1.2 };
-    double beta = 0.3;
-    double map_size = 0.02;
-//    Points points = { Point(0,0,0),Point(0,0,1),Point(0,1,1),Point(0,1,0) };
-//    Faces faces = { Face(0,1,3),Face(2,3,1) };
     AABB box;
 
     objl::Mesh mesh;    get_mesh("3DObjects/cube.obj", mesh);
     Points points;      get_points(mesh, points, box);
     Faces faces;        get_faces(mesh, faces);
 
-    int nearest_point = -1; int nearest_face = -1; float dist;
+    // Basecase
+    // Points points = { Point(0,0,0),Point(0,0,1),Point(0,1,1),Point(0,1,0) };
+    // Faces faces = { Face(0,1,3),Face(2,3,1) };
 
     cout << "Num of points : " << points.size() << endl;
     cout << "Num of faces : " << faces.size() << endl;
+
     box.print();
+
+    Point target = { 0,1,1.2 };
+    double beta = 0.3;
+    double map_size = 0.02;
+
+    auto res = run_cuda_test(box, faces, points, target, map_size, beta);
+    return res;
+}
+
+int run_cuda_test(const AABB& box, const Faces& faces, const Points& points, const Point& target, const double& map_size, const double& beta) {
+    int nearest_point = -1; int nearest_face = -1; float dist;
 
     Point_index(Point(box.xmin, box.ymin, box.zmin), map_size).print();
     Point_index(Point(box.xmax, box.ymax, box.zmax), map_size).print();
@@ -305,7 +367,8 @@ int main()
 
     // cudaDeviceReset must be called before exiting in order for profiling and tracing tools such as Nsight and Visual Profiler to show complete traces.
     cudaStatus = cudaDeviceReset(); _DEVICE_RESET_FAILED_
-    cout << endl;
+
+        cout << endl;
     cout << "**************************CUDA_TEST_SUCCESS********************************" << endl;
     cout << "**************************CUDA_TEST_SUCCESS********************************" << endl << endl;
 
@@ -315,7 +378,7 @@ int main()
     print_output(dist, nearest_point, target, points);
     cout << endl << endl;
 
- 
+
     cout << "---------------------Pointwise---------------------------" << endl;
     cout << "Unsigned_distance_cuda_hash_table with Faces => " << endl; nearest_point = -1;
     dist = cuda_hash_map_implementation(faces, points, target, map_size, beta); cout << endl;
@@ -330,14 +393,8 @@ int main()
     cout << endl << endl;
 
     return 0;
+
 }
-
-#define _SETUP_FAILED_ if (cudaStatus != cudaSuccess) {fprintf(stderr, "\n\ncudaSetDevice failed!  \n\nDo you have a CUDA-capable GPU installed?\n\n");goto Error;}
-#define _MALLOC_FAILED_ if (cudaStatus != cudaSuccess) {fprintf(stderr, "\n\ncudaMalloc failed!\n\n");goto Error;}
-#define _SYNC_FAILED_ if (cudaStatus != cudaSuccess) {fprintf(stderr, "\n\ncudaDeviceSynchronize returned error code %d after launching addKernel!\n\n");goto Error;}
-#define _KERNAL_FAILED_ if (cudaStatus != cudaSuccess) {    fprintf(stderr, "\n\naddKernel launch failed: %s\n\n", cudaGetErrorString(cudaStatus));    goto Error;}
-
-
 
 // Helper function for using CUDA to add vectors in parallel.
 cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int size)
@@ -372,9 +429,9 @@ cudaError_t addWithCuda(int* c, const int* a, const int* b, unsigned int size)
         cudaStatus = cudaMemcpy(c, dev_c, size * sizeof(int), cudaMemcpyDeviceToHost); _MALLOC_FAILED_
 
         Error :
-    cudaFree(dev_c);
-    cudaFree(dev_a);
-    cudaFree(dev_b);
+            cudaFree(dev_c);
+            cudaFree(dev_a);
+            cudaFree(dev_b);
 
     return cudaStatus;
 }

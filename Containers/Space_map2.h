@@ -97,7 +97,7 @@ public:
         }
     }
 
-    void generate_cuda_hashmap() {
+    void get_cuda_hashmap() {
         int first_item = 0, count_items = 0;
         auto bucket_count = point_map.bucket_count();
 
