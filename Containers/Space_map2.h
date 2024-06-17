@@ -75,7 +75,7 @@ public:
     }
 
     Space_map2(const Faces faces, const Points& points, const double& mapsize) {
-        int num_faces = points.size(), xmin, ymin, zmin, xmax, ymax, zmax;
+        int num_faces = faces.size(), xmin, ymin, zmin, xmax, ymax, zmax;
         map_size = mapsize;
         point_map.reserve(num_faces * 5);
 
@@ -188,7 +188,7 @@ public:
 #define _MINIMUM_(A,B) A < B ? A : B
 #define _LINEAR_INDEX_(i,j,k,dim) i + j * dim + k * dim * dim
 
-    double calculate_min_dist(const Points& points,const Point& target, const double& beta)
+    double serial_calculate_min_dist(const Points& points,const Point& target, const double& beta)
     {
         int threads_dim, blocks_dim, dim, i0, j0,  k0;
         get_dim(target, map_size, beta, threads_dim, blocks_dim, dim, i0, j0, k0);
@@ -200,11 +200,6 @@ public:
             for (int j = 0; j < dim; j++)
                 for (int k = 0; k < dim; k++) 
                 {
-
-                    // Print thread and block indices
-                   //if(k==0 && j == 0) printf("i : %d , j : %d , k : %d\n",i,j,k);
-                    //if (i >= dim || j >= dim || k >= dim)
-                    //    return;
 
                     min_distances[_LINEAR_INDEX_(i, j, k, dim)] = beta2;
 
@@ -236,6 +231,51 @@ public:
         return min_dist_var;
 
     }
+
+    double serial_calculate_min_dist(const Faces& faces, const Points& points, const Point& target, const double& beta)
+    {
+        int threads_dim, blocks_dim, dim, i0, j0, k0;
+        get_dim(target, map_size, beta, threads_dim, blocks_dim, dim, i0, j0, k0);
+        auto beta2 = beta * beta;
+        auto bucket_count = point_map.bucket_count();
+        vector<double> min_distances(dim * dim * dim);
+
+        for (int i = 0; i < dim; i++)
+            for (int j = 0; j < dim; j++)
+                for (int k = 0; k < dim; k++)
+                {
+
+                    min_distances[_LINEAR_INDEX_(i, j, k, dim)] = beta2;
+
+                    int bucket_index = _HASH_(i0 + i, j0 + j, k0 + k) % bucket_count;
+
+                    int first = buckets[bucket_index].first;
+                    int count = buckets[bucket_index].count;
+                    double min_distance = beta2, dist;
+                    //if(k==0 && j == 0) printf("bucket_index : %d ,bucket_count : %d, first : %d , count : %d\n",bucket_index,bucket_count,first,count);
+
+                    for (size_t iter = first; iter < first + count; iter++)
+                    {
+                        if (count == 0) break;
+                        //printf("count : %d, i : %d , j : %d , k : %d\n", count, i, j, k);
+                        const Point_index& face_index = point_indexes[iter];
+                        if (face_index.x == (i0 + i) && face_index.y == (j0 + j) && face_index.z == (k0 + k)) {
+                            dist = faces[face_index.index].dist(target, points);
+                            min_distance = _MINIMUM_(min_distance, dist);
+                            //printf("dist %f : %d,%d,%d\n", dist, i + i0, j + j0, k + k0);
+                        }
+
+                    }
+                    min_distances[_LINEAR_INDEX_(i, j, k, dim)] = min_distance;
+                }
+        auto min_dist_var = min_distances[0];
+        for (auto dist : min_distances)
+            min_dist_var = _MINIMUM_(min_dist_var, dist);
+
+        return min_dist_var;
+
+    }
+
 
     //double search_space_map_parallel(const Points& points, const Point& target, const double& beta, int& nearest_point) {
     //    vector<int> point_indexes;

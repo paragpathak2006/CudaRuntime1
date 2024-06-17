@@ -170,7 +170,7 @@ double serial_hash_map_implementation(const Points& points, const Point& target,
 {
     Space_map2 space_map(/* with input points as */ points, /* map_size as */ map_size);
     space_map.generate_cuda_hashmap();
-    return space_map.calculate_min_dist(points, target, beta);
+    return space_map.serial_calculate_min_dist(points, target, beta);
 }
 
 double cuda_hash_map_implementation(const Points& points, const Point& target, double map_size, double beta)
@@ -203,6 +203,12 @@ double cuda_hash_map_implementation(const Points& points, const Point& target, d
 
     return thrust::reduce(_ITER_(min_distances), beta2, min_dist());
 
+}
+double serial_hash_map_implementation(const Faces& faces, const Points& points, const Point& target, double map_size, double beta)
+{
+    Space_map2 space_map(/* with input Faces as */faces,/* with input points as */ points, /* map_size as */ map_size);
+    space_map.generate_cuda_hashmap();
+    return space_map.serial_calculate_min_dist(faces, points, target, beta);
 }
 
 double cuda_hash_map_implementation(const Faces& faces, const Points& points, const Point& target, double map_size, double beta)
@@ -281,6 +287,11 @@ int main()
     dist = serial_hash_map_implementation(points, target, map_size, beta); cout << endl;
     print_output(dist, nearest_point, target, points);
 
+    cout << "---------------------Pointwise---------------------------" << endl;
+    cout << "Unsigned_distance for Faces (Serial cuda) => " << endl; nearest_point = -1;
+    dist = serial_hash_map_implementation(faces, points, target, map_size, beta); cout << endl;
+    print_output(dist, nearest_face, target, points, faces);
+
     cout << endl << endl;
     cout << "**************************CUDA_TEST_BEGINS********************************" << endl;
     cout << "**************************CUDA_TEST_BEGINS********************************" << endl << endl;
@@ -304,14 +315,14 @@ int main()
     print_output(dist, nearest_point, target, points);
     cout << endl << endl;
 
-    return 0;
-
+ 
     cout << "---------------------Pointwise---------------------------" << endl;
     cout << "Unsigned_distance_cuda_hash_table with Faces => " << endl; nearest_point = -1;
     dist = cuda_hash_map_implementation(faces, points, target, map_size, beta); cout << endl;
     print_output(dist, nearest_point, target, points);
     cout << endl << endl;
 
+    return 0;
     cout << "---------------------Pointwise---------------------------" << endl;
     cout << "Unsigned_distance_space_map Old" << endl; nearest_point = -1;
     dist = unsigned_distance_space_map_cuda(points, target, beta, map_size, nearest_point); cout << endl;

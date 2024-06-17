@@ -55,14 +55,14 @@ double unsigned_distance_space_map2(const Points& points, const Point& target, d
     return unsigned_dist;
 }
 
-void print_output(float dist, int nearest_point, const Point& target, const Points& points) {
+void print_output(double dist, int nearest_point, const Point& target, const Points& points) {
     cout << "Unsigned distance : " << sqrt(dist) << endl;
     cout << "Target point : "; target.print();
     if (nearest_point >= 0) {cout << "Nearest point : ";points[nearest_point].print();}
     cout << endl << endl;
 }
 
-void print_output(float dist, int nearest_face, const Point& target, const Points& points, const Faces& faces) {
+void print_output(double dist, int nearest_face, const Point& target, const Points& points, const Faces& faces) {
     cout << "Unsigned distance : " << sqrt(dist) << endl;
     cout << "Target point : "; target.print();
     if (nearest_face >= 0) { cout << "Nearest Face : "; faces[nearest_face].print(); }
