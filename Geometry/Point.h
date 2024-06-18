@@ -87,6 +87,12 @@ public:
     AABB() { xmin = 0; ymin = 0; zmin = 0; xmax = 1; ymax = 1; zmax = 1; }
     AABB(double _xmin, double _ymin, double _zmin, double _xmax, double _ymax, double _zmax) { xmin = _xmin; ymin = _ymin; zmin = _zmin; xmax = _xmax; ymax = _ymax; zmax = _zmax; }
     void print() const { printf("Bounding Box : Min(%f,%f,%f) , Max(%f,%f,%f)\n", xmin, ymin, zmin, xmax, ymax, zmax); }
+
+    bool check_point_outside_beta_box(const Point& target, const double& beta) const {
+        if (target.x + beta < xmin || target.y + beta < ymin || target.z + beta < zmin) return true;
+        if (target.x - beta > xmax || target.y - beta > ymax || target.z - beta > zmax) return true;
+        return false;
+    }
 };
 
 typedef vector<Point> Points;

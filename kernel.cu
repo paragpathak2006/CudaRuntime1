@@ -90,10 +90,8 @@ void get_dim(const Point& target, const double& map_size, const double& beta, in
     cout << endl << "(i1,  j1, k1) : ( " << i0 + dim << " , " << j0 + dim << " , " << k0 + dim << " )" << endl;
 }
 
-
 #define _MINIMUM_(A,B) A < B ? A : B
 #define _LINEAR_INDEX_(i,j,k,dim) i + j * dim + k * dim * dim
-
 
 __global__
 void calculate_min_dist(
@@ -166,7 +164,6 @@ void calculate_min_dist(
     }
     min_distances[_LINEAR_INDEX_(i, j, k, dim)] = min_distance;
 }
-
 
 #define _DIM3_(x) x,x,x
 #define _CUBE_(x) x*x*x
@@ -329,6 +326,12 @@ int run_cuda_test(const AABB& box, const Faces& faces, const Points& points, con
     cout << "Beta : " << beta << endl;
     cout << "Map size : " << map_size << endl << endl;
 
+    if (box.check_point_outside_beta_box(target, beta))
+    {
+        cout << "Target point is outside Beta box" << endl;;
+        return 0;
+    }
+
     cout << "---------------------Pointwise-----------------" << endl;
     cout << "Unsigned distance for Points (brute force) => " << endl; nearest_point = -1;
     dist = unsigned_distance_brute_force(points, target, beta, nearest_point); cout << endl;
@@ -368,7 +371,7 @@ int run_cuda_test(const AABB& box, const Faces& faces, const Points& points, con
     // cudaDeviceReset must be called before exiting in order for profiling and tracing tools such as Nsight and Visual Profiler to show complete traces.
     cudaStatus = cudaDeviceReset(); _DEVICE_RESET_FAILED_
 
-        cout << endl;
+    cout << endl;
     cout << "**************************CUDA_TEST_SUCCESS********************************" << endl;
     cout << "**************************CUDA_TEST_SUCCESS********************************" << endl << endl;
 
@@ -386,6 +389,7 @@ int run_cuda_test(const AABB& box, const Faces& faces, const Points& points, con
     cout << endl << endl;
 
     return 0;
+
     cout << "---------------------Pointwise---------------------------" << endl;
     cout << "Unsigned_distance_space_map Old" << endl; nearest_point = -1;
     dist = unsigned_distance_space_map_cuda(points, target, beta, map_size, nearest_point); cout << endl;
@@ -393,7 +397,6 @@ int run_cuda_test(const AABB& box, const Faces& faces, const Points& points, con
     cout << endl << endl;
 
     return 0;
-
 }
 
 // Helper function for using CUDA to add vectors in parallel.
