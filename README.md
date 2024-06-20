@@ -39,6 +39,8 @@ Go over all the points and faces to find the minimum possible distance dmin  bet
 Recommended approach of indexing is using octree, but in our case were going to implement a simple space map to spatially Index the mesh points. After indexing, find all the points and faces in a β sphere to minimize list of candidate Points to search.
 Spatial indexing using CUDA, requires us to implement unordered map using CUDA. A vectorized unordered map is implemented using an additional vector container for storing indexes. The program is supposed to handle each spatial index on an individual CUDA thread. However, the process of indexing is still serial, as we have assumed this will not be repeated and is not time-constrained.
 CUDA streams can be used to further enhance the concurrency of the data transfer process.
+![image](https://github.com/paragpathak2006/CudaRuntime1/assets/31978917/b0443065-ff67-4f37-af8e-55b95cbc5726)
+
 ## Parallel Hashmap
 A parallelized version of Hashing was also implemented.
 
