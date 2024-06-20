@@ -3,7 +3,7 @@
 https://github.com/paragpathak2006/unsigned_distance_function<br/>
 https://github.com/paragpathak2006/CudaRuntime1 <br/><br/>
 
-This cannot be updated. Lastes updates are in the following repo2 <br/>
+This repo cannot be updated due to git issues. Lastest updates are in the following repo2 <br/>
 https://github.com/paragpathak2006/CudaRuntime2 <br/>
 
 ## Mesh
