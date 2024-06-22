@@ -8,18 +8,19 @@ https://github.com/paragpathak2006/CudaRuntime1 <br/><br/>
 Lastest updates are in the following repo2 <br/>
 https://github.com/paragpathak2006/CudaRuntime2 <br/>
 ## Mesh
-Define a Mesh that has vertex Points Pi and Triangular faces Tj as <br/>
+Define a Mesh that has vertex Points $P_i$ and Triangular faces $T_j$ as <br/>
 $$Mesh(P_i,T_j) = (P_a,P_b,P_c)$$
 ## Bounding box
 If point is outside a bounding BoxPi  at β distance, them point is automatically a Beta distance. <br/>
 $$Box(P_i,β) = (P_{min} \pm β , P_{max} \pm β)$$
 
 ## Convex hull method
-If point is outside a bounding convex Hull Pi  at β distance, them point is automatically outside a Beta distance.  <br/>
+If point is outside a bounding convex Hull $P_i$  at β distance, them point is automatically outside a Beta distance.  <br/>
 
 ## Pointwise distance
 Q is query point. βis maximum truncated distance. <br/>
 $$d_{min}=\min(d(Q,P_i),β)$$ <br/>
+
 ## Facewise distance
 Q is query point. βis maximum truncated distance. <br/>
 $$d_{min}=\min(d(Q,T_j),β)$$ <br/>
@@ -27,12 +28,12 @@ Use Ref: Distance Between Point and Triangle in 3D (geometrictools.com) <br/>
 (https://www.geometrictools.com/Documentation/DistancePoint3Triangle3.pdf) <br/>
 
 Let Face Triangle be defined as <br/>
-$$\boldsymbol{T}_j(s,t)= \boldsymbol{B} + s\boldsymbol{E_0} +t\boldsymbol{E_1} ,\space ∀ \space s≥0,\space t≥0,\space s+t≤1$$
+$$\boldsymbol{T}_j(s,t)= \boldsymbol{B} + s\boldsymbol{E_0} +t\boldsymbol{E_1} ,\quad ∀ \quad s≥0,\quad t≥0,\quad s+t≤1$$
 
 Face Triangle to Point distance can be found using the formula<br/>
-$$d(Q,T_j)=d(s,t)=as^2 + 2bst + ct^2 + 2ds + 2et + f$$
+$$d(Q,T_j) = d(s,t) = as^2 + 2bst + ct^2 + 2ds + 2et + f$$
 $$a = \boldsymbol{E_0 · E_0}, \quad b = \boldsymbol{E_0 · E_1}, \quad c = \boldsymbol{E_1 · E_1}$$
-$$d = \boldsymbol{E0 · (B - P)}, \quad e = \boldsymbol{E1 · (B - P)}, \quad f = \boldsymbol{(B - P) · (B - P)}$$
+$$d = \boldsymbol{E_0 · (B - P)}, \quad e = \boldsymbol{E_1 · (B - P)}, \quad f = \boldsymbol{(B - P) · (B - P)}$$
 $$d(0,t)= ct^2 + 2et + f→t=-\frac{e}{c}$$
 $$d(s,0)=as^2 + 2ds + f→s=-\frac{d}{a}$$
 $$d(s,1-s)=as^2 + 2bs1-s+c(1-s)^2 + 2ds+ 2e(1 - s)+ f$$
